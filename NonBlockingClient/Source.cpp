@@ -4,6 +4,10 @@
 
 int main()
 {
+	/**
+	* 
+	* BLOCKING VERSION
+	* 
 	if (CustomSocket::NetworkAPIInitializer::Initialize())
 	{
 		std::cout << "The winsock API was successfully initialized." << std::endl;
@@ -56,6 +60,64 @@ int main()
 	}
 
 	CustomSocket::NetworkAPIInitializer::Shutdown();
+	**/
+
+	if (CustomSocket::NetworkAPIInitializer::Initialize() == true)
+	{
+		CustomSocket::Socket client_socket;
+
+		if (client_socket.create() == CustomSocket::Result::Success)
+		{
+			std::cout << "[SERVICE INFO]: ";
+			std::cout << "Socket was successfully created." << std::endl;
+
+			if (client_socket.SetNonBlocking(false) == CustomSocket::Result::Success)
+			{
+				std::cout << "[SERVICE INFO]: ";
+				std::cout << "Socket was successfully switched to Blocking state." << std::endl;
+
+				CustomSocket::IPEndpoint IPToConnect("127.0.0.1", 4790);
+
+				if (client_socket.Connect(IPToConnect) == CustomSocket::Result::Success)
+				{
+					std::cout << "[SERVICE INFO]: ";
+					std::cout << "Socket was successfully connected." << std::endl;
+					std::cout << IPToConnect;
+				}
+				else
+				{
+					std::cerr << "[SERVICE INFO]: ";
+					std::cerr << "Failed to connect to IP = " << IPToConnect.GetIPString();
+					std::cerr << " port " << IPToConnect.GetPort() << "." << std::endl;
+				}
+			}
+			else
+			{
+				std::cerr << "[SERVICE INFO]: ";
+				std::cerr << "Failed to set the socket to Blocking state." << std::endl;
+			}
+
+			if (client_socket.close() == CustomSocket::Result::Success)
+			{
+				std::cout << "[SERVICE INFO]: ";
+				std::cout << "Socket was successfully closed." << std::endl;
+			}
+			else
+			{
+				std::cerr << "[SERVICE INFO]: ";
+				std::cerr << "Failed to close the socket." << std::endl;
+			}
+		}
+		else
+		{
+			std::cerr << "[SERVICE INFO]: ";
+			std::cerr << "Failed to create the WinSock API socket." << std::endl;
+		}
+	}
+	else
+	{
+		std::cerr << "[SERVICE INFO]: " << "Failed to strat up the WinSock API." << std::endl;
+	}
 
 	system("pause");
 	return 0;

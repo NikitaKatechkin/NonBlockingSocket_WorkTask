@@ -27,6 +27,8 @@ namespace CustomSocket
 		Result SendAll(void* data, int numberOfBytes);
 		Result RecieveAll(void* data, int numberOfBytes);
 
+		Result SetNonBlocking(bool isBlocking);
+
 		SocketHandle getHandle();
 		IPVersion getIPVersion();
 

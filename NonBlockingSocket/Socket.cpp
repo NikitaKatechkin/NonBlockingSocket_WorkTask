@@ -264,6 +264,21 @@ namespace CustomSocket
         return result;
     }
 
+    Result Socket::SetNonBlocking(bool isNonBlocking)
+    {
+        u_long blockValue = isNonBlocking ? 1 : 0;
+
+        Result result = (ioctlsocket(m_handle, FIONBIO, &blockValue) == SOCKET_ERROR) ? Result::Fail:
+                                                                                     Result::Success;
+
+        if (result == Result::Fail)
+        {
+            WSAGetLastError();
+        }
+
+        return result;
+    }
+
     SocketHandle Socket::getHandle()
     {
         return m_handle;

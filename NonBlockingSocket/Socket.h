@@ -12,8 +12,8 @@ namespace CustomSocket
 			   IPVersion IPVersion = IPVersion::IPv4);
 		~Socket() = default;
 
-		Result create();
-		Result close();
+		Result Create();
+		Result Close();
 
 		Result Bind(IPEndpoint endpooint);
 		Result Listen(IPEndpoint endpoint, int backlog = 5);
@@ -24,18 +24,17 @@ namespace CustomSocket
 		Result Send(void* data, int numberOfBytes, int& bytesSent);
 		Result Recieve(void* destination, int numberOfBytes, int& bytesRecieved);
 
-		Result SendAll(void* data, int numberOfBytes);
-		Result RecieveAll(void* data, int numberOfBytes);
+		Result SendAll(void* data, int& numberOfBytes);
+		Result RecieveAll(void* data, int& numberOfBytes);
 
-		Result SetNonBlocking(bool isBlocking);
+		SocketHandle GetHandle();
+		IPVersion GetIPVersion();
 
-		SocketHandle getHandle();
-		IPVersion getIPVersion();
+		void SetHandle(SocketHandle handle);
+		void SetIPVersion(IPVersion ipVersion);
 
-		void setHandle(SocketHandle handle);
-		void setIPVersion(IPVersion ipVersion);
+		Result SetSocketOption(Option option, BOOL value);
 	private:
-		Result setSocketOption(Option option, BOOL value);
 
 	private:
 		SocketHandle m_handle = INVALID_SOCKET;

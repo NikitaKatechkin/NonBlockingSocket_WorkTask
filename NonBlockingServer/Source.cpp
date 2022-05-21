@@ -74,12 +74,13 @@ int main()
 	{
 		CustomSocket::Socket server_socket;
 
-		if (server_socket.create() == CustomSocket::Result::Success)
+		if (server_socket.Create() == CustomSocket::Result::Success)
 		{
 			std::cout << "[SERVICE INFO]: ";
 			std::cout << "Socket was successfully created." << std::endl;
 
-			if (server_socket.SetNonBlocking(true) == CustomSocket::Result::Success)
+			if (server_socket.SetSocketOption(CustomSocket::Option::IO_NonBlocking, 
+											  FALSE) == CustomSocket::Result::Success)
 			{
 				std::cout << "[SERVICE INFO]: ";
 				std::cout << "Socket was successfully switched to Non Blocking state." << std::endl;
@@ -98,7 +99,7 @@ int main()
 					std::cout << "[SERVICE INFO]: ";
 					std::cout << "Client was successfully connected." << std::endl;
 
-					if (newClientSocket.close() == CustomSocket::Result::Success)
+					if (newClientSocket.Close() == CustomSocket::Result::Success)
 					{
 						std::cout << "[CLIENT]: " << "STATUS = Disconnected" << std::endl;
 					}
@@ -122,7 +123,7 @@ int main()
 				std::cerr << "Failed to set the socket to Non Blocking state." << std::endl;
 			}
 
-			if (server_socket.close() == CustomSocket::Result::Success)
+			if (server_socket.Close() == CustomSocket::Result::Success)
 			{
 				std::cout << "[SERVICE INFO]: ";
 				std::cout << "Socket was successfully closed." << std::endl;

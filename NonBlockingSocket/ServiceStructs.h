@@ -22,6 +22,7 @@ namespace CustomSocket
 
 	enum class Option
 	{
-		TCP_NoDelay,
+		IO_NonBlocking,
+		TCP_NoDelay
 	};
 }

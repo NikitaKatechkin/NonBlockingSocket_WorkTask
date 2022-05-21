@@ -12,7 +12,7 @@ namespace CustomSocket
         }
     }
 
-    Result Socket::create()
+    Result Socket::Create()
     {
         if (m_IPVersion != IPVersion::IPv4)
         {
@@ -29,7 +29,7 @@ namespace CustomSocket
 
             if (m_handle != INVALID_SOCKET)
             {
-                result = (setSocketOption(Option::TCP_NoDelay, TRUE) != Result::Success) 
+                result = (SetSocketOption(Option::TCP_NoDelay, TRUE) != Result::Success) 
                     ? Result::Fail : Result::Success;
             }
         }
@@ -42,7 +42,7 @@ namespace CustomSocket
         return result;
     }
 
-    Result Socket::close()
+    Result Socket::Close()
     {
         Result result = Result::Fail;
 
@@ -130,8 +130,8 @@ namespace CustomSocket
         else
         {
             //outSocket = Socket(acceptedConnectionHandle, IPVersion::IPv4); // Replace to setters
-            outSocket.setHandle(acceptedConnectionHandle);
-            outSocket.setIPVersion(IPVersion::IPv4);
+            outSocket.SetHandle(acceptedConnectionHandle);
+            outSocket.SetIPVersion(IPVersion::IPv4);
 
             IPEndpoint newConnectionEndpoint(reinterpret_cast<sockaddr*>(&addr));
 
@@ -216,7 +216,7 @@ namespace CustomSocket
         return result;
     }
 
-    Result Socket::SendAll(void* data, int numberOfBytes)
+    Result Socket::SendAll(void* data, int& numberOfBytes)
     {
         int totalBytesSent = 0;
         Result result = Result::Success;
@@ -237,10 +237,12 @@ namespace CustomSocket
             totalBytesSent += bytesSent;
         }
 
+        numberOfBytes = totalBytesSent;
+
         return result;
     }
 
-    Result Socket::RecieveAll(void* data, int numberOfBytes)
+    Result Socket::RecieveAll(void* data, int& numberOfBytes)
     {
         int totalBytesRecieved = 0;
         Result result = Result::Success;
@@ -261,67 +263,63 @@ namespace CustomSocket
             totalBytesRecieved += bytesRecieved;
         }
 
-        return result;
-    }
-
-    Result Socket::SetNonBlocking(bool isNonBlocking)
-    {
-        u_long blockValue = isNonBlocking ? 1 : 0;
-
-        Result result = (ioctlsocket(m_handle, FIONBIO, &blockValue) == SOCKET_ERROR) ? Result::Fail:
-                                                                                     Result::Success;
-
-        if (result == Result::Fail)
-        {
-            WSAGetLastError();
-        }
+        numberOfBytes = totalBytesRecieved;
 
         return result;
     }
 
-    SocketHandle Socket::getHandle()
+    SocketHandle Socket::GetHandle()
     {
         return m_handle;
     }
 
-    IPVersion Socket::getIPVersion()
+    IPVersion Socket::GetIPVersion()
     {
         return m_IPVersion;
     }
 
-    void Socket::setHandle(SocketHandle handle)
+    void Socket::SetHandle(SocketHandle handle)
     {
         m_handle = handle;
     }
 
-    void Socket::setIPVersion(IPVersion ipVersion)
+    void Socket::SetIPVersion(IPVersion ipVersion)
     {
         m_IPVersion = ipVersion;
     }
     
-    Result Socket::setSocketOption(Option option, BOOL value)
+    Result Socket::SetSocketOption(Option option, BOOL value)
     {
 
-        int code_result = 0;
+        Result result = Result::Fail;
 
         switch (option)
         {
+        case Option::IO_NonBlocking:
+        {
+            u_long blockValue = (value == TRUE) ? 1 : 0;
+            result = (ioctlsocket(m_handle, FIONBIO, &blockValue) == SOCKET_ERROR) ? Result::Fail :
+                                                                                     Result::Success;
+
+            break;
+        }
         case Option::TCP_NoDelay:
         {
-            code_result = setsockopt(m_handle, IPPROTO_TCP, TCP_NODELAY,
-                (const char*)&value, sizeof(BOOL));
+            result = (setsockopt(m_handle, IPPROTO_TCP, TCP_NODELAY,
+                                 (const char*)&value, sizeof(BOOL)) == 0) ? Result::Success :
+                                                                            Result::Fail;
             break;
         }
         default:
-            code_result = -1;
+            break;
         }
 
-        if (code_result != 0)
+        if (result != Result::Success)
         {
             WSAGetLastError();
         }
 
-        return (code_result != 0) ? Result::Fail : Result::Success;
+        return result;
     }
 }
 

@@ -30,6 +30,7 @@ protected:
 
 	CONNECTIONS m_connection;
 	std::vector<WSAPOLLFD> m_socketFDs;
+	std::vector<bool> m_writeFlag;
 
 	bool m_isRunning;
 

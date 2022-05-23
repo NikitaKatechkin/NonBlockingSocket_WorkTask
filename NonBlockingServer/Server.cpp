@@ -41,6 +41,7 @@ Server::Server(const CustomSocket::IPEndpoint& IPconfig):
 	//listeningSocketFD.revents = 0; // I get
 
 	m_socketFDs.push_back(listeningSocketFD);
+	m_writeFlag.push_back(false);
 }
 
 CustomSocket::Result Server::run()
@@ -100,6 +101,7 @@ CustomSocket::Result Server::disconnect(const uint16_t port)
 
 		size_t portToDisconnectIndex = portToDisconnect - m_connection.begin();
 		m_socketFDs.erase(m_socketFDs.begin() + portToDisconnectIndex + 1);
+		m_writeFlag.erase(m_writeFlag.begin() + portToDisconnectIndex + 1);
 
 		m_connection.erase(portToDisconnect);
 	}
@@ -133,6 +135,7 @@ CustomSocket::Result Server::connect()
 											0 };
 
 			m_socketFDs.push_back(listeningSocketFD);
+			m_writeFlag.push_back(false);
 
 			std::cout << "[SERVICE INFO]: " << "Pool size = ";
 			std::cout << m_connection.size() << "." << std::endl;
@@ -200,14 +203,29 @@ void Server::inspectAllConnections()
 				== CustomSocket::Result::Success)
 			{
 				std::cout << "[CLIENT]: " << buffer << std::endl;
-				m_connection[index].first.Close();
+				m_writeFlag[index + 1] = true;
+				//m_connection[index].first.Close();
 				//disconnect(m_connection[index].second.GetPort());
 			}
 		}
 		if (m_socketFDs[index + 1].revents & POLLWRNORM)
 		{
 			//WRITE
-			//std::cout << "Writing..." << std::endl;
+			if (m_writeFlag[index + 1] == true)
+			{
+				const char buffer[256] = { "Hello, world)))\0" };
+				int bytesSent = 0;
+
+				if (m_connection[index].first.Send(const_cast<char*>(buffer), 256, bytesSent)
+					== CustomSocket::Result::Success)
+				{
+					std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
+					std::cout << " bytes sent}" << std::endl;
+					m_writeFlag[index + 1] = false;
+					//m_connection[index].first.Close();
+					//disconnect(m_connection[index].second.GetPort());
+				}
+			}
 		}
 	}
 }

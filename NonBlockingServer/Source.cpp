@@ -1,75 +1,11 @@
 #include <NonBlockingSocket/IncludeMe.h>
+#include <NonBlockingServer/Server.h>
 #include <iostream>
+#include <thread>
 
 int main()
 {
-	/** 
-	* 
-	* BLOCKING VERSION
-	* 
-	if (CustomSocket::NetworkAPIInitializer::Initialize())
-	{
-		std::cout << "The winsock API was successfully initialized." << std::endl;
-
-		CustomSocket::Socket socket;
-		if (socket.create() == CustomSocket::Result::Success)
-		{
-			std::cout << "The socket was successfully created." << std::endl;
-
-			if (socket.Listen(CustomSocket::IPEndpoint("0.0.0.0", 4790))
-				== CustomSocket::Result::Success)
-			{
-				std::cout << "Socket successfully listening on port 4790." << std::endl;
-
-				CustomSocket::Socket newConnection;
-				if (socket.Accept(newConnection) == CustomSocket::Result::Success)
-				{
-					char buffer[256];
-					//int bytesRecieved = 0;
-
-					CustomSocket::Result result = CustomSocket::Result::Fail;
-					while (result != CustomSocket::Result::Success)
-					{
-						//result = newConnection.Recieve(buffer, 256, bytesRecieved);
-						result = newConnection.RecieveAll(buffer, 256);
-
-						if (result == CustomSocket::Result::Success)
-						{
-							std::cout << "[CLIENT]: " << buffer << std::endl;
-							break;
-						}
-					}
-
-					newConnection.close();
-				}
-				else
-				{
-					std::cerr << "Failed to accept connection on a socket." << std::endl;
-				}
-			}
-			else
-			{
-				std::cerr << "Failed to listen a socket on port 4790." << std::endl;
-			}
-
-			if (socket.close() == CustomSocket::Result::Success)
-			{
-				std::cout << "The socket was successfully closed." << std::endl;
-			}
-			else
-			{
-				std::cout << "Failed to close a socket." << std::endl;
-			}
-		}
-		else
-		{
-			std::cout << "Failed to create a socket." << std::endl;
-		}
-	}
-
-	CustomSocket::NetworkAPIInitializer::Shutdown();
-	**/
-
+	/**
 	if (CustomSocket::NetworkAPIInitializer::Initialize() == true)
 	{
 		CustomSocket::Socket server_socket;
@@ -80,7 +16,7 @@ int main()
 			std::cout << "Socket was successfully created." << std::endl;
 
 			if (server_socket.SetSocketOption(CustomSocket::Option::IO_NonBlocking, 
-											  FALSE) == CustomSocket::Result::Success)
+											  TRUE) == CustomSocket::Result::Success)
 			{
 				std::cout << "[SERVICE INFO]: ";
 				std::cout << "Socket was successfully switched to Non Blocking state." << std::endl;
@@ -94,6 +30,8 @@ int main()
 					{
 						//std::cerr << "[SERVICE INFO]: ";
 						//std::cerr << "Failed to accept new connection on the socket." << std::endl;
+
+						std::this_thread::sleep_for(std::chrono::seconds(2));
 					}
 
 					std::cout << "[SERVICE INFO]: ";
@@ -144,6 +82,18 @@ int main()
 	{
 		std::cerr << "[SERVICE INFO]: " << "Failed to strat up the WinSock API." << std::endl;
 	}
+
+	system("pause");
+	return 0;
+	**/
+
+	Server server(CustomSocket::IPEndpoint("127.0.0.1", 4790));
+	
+	server.run();
+
+	std::this_thread::sleep_for(std::chrono::seconds(15));
+
+	server.stop();
 
 	system("pause");
 	return 0;

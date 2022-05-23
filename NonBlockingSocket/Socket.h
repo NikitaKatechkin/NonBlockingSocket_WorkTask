@@ -10,7 +10,7 @@ namespace CustomSocket
 	public:
 		Socket(SocketHandle handle = INVALID_SOCKET, 
 			   IPVersion IPVersion = IPVersion::IPv4);
-		~Socket() = default;
+		~Socket();
 
 		Result Create();
 		Result Close();
@@ -18,7 +18,7 @@ namespace CustomSocket
 		Result Bind(IPEndpoint endpooint);
 		Result Listen(IPEndpoint endpoint, int backlog = 5);
 
-		Result Accept(Socket& outSocket);
+		Result Accept(Socket& outSocket, IPEndpoint* outEndpoint = nullptr);
 		Result Connect(IPEndpoint endpoint);
 
 		Result Send(void* data, int numberOfBytes, int& bytesSent);
@@ -34,9 +34,9 @@ namespace CustomSocket
 		void SetIPVersion(IPVersion ipVersion);
 
 		Result SetSocketOption(Option option, BOOL value);
-	private:
+	protected:
 
-	private:
+	protected:
 		SocketHandle m_handle = INVALID_SOCKET;
 		IPVersion m_IPVersion = IPVersion::IPv4;
 	};

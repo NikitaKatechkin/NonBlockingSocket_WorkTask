@@ -11,7 +11,6 @@ namespace CustomSocket
 	{
 		in_addr address;
 		int result = inet_pton(AF_INET, ip.c_str(), &address);
-
 		//IF VALID IPv4 address was provided
 		if (result == 1)
 		{
@@ -19,34 +18,24 @@ namespace CustomSocket
 			{
 				m_ipString = ip;
 				m_hostname = ip;
-
 				memcpy_s(m_ipBytes, sizeof(uint32_t), &address.S_un.S_addr, sizeof(uint32_t));
-
 				m_ipVersion = IPVersion::IPv4;
 				return;
 			}
 		}
-
 		addrinfo hints = {};
 		hints.ai_family = AF_INET;
-
 		addrinfo* hostinfo = nullptr;
-
 		result = getaddrinfo(ip.c_str(), nullptr, &hints, &hostinfo);
 		if (result == 0)
 		{
 			sockaddr_in* host_addr = reinterpret_cast<sockaddr_in*>(hostinfo->ai_addr);
-
 			//host_addr->sin_addr.S_un.S_addr
 			m_ipString.resize(16);
 			inet_ntop(AF_INET, &host_addr->sin_addr, &m_ipString[0], 16);
-
 			m_hostname = ip;
-
 			memcpy_s(m_ipBytes, sizeof(ULONG), &host_addr->sin_addr.S_un.S_addr, sizeof(ULONG));
-
 			m_ipVersion = IPVersion::IPv4;
-
 			freeaddrinfo(hostinfo);
 			return;
 		}
@@ -57,8 +46,8 @@ namespace CustomSocket
 		m_port(port), m_ipBytes(new uint8_t[IPv4_ADDRESS_SIZE])
 	{
 		in_addr ipAddrBuf;
-		Result result = inet_pton(AF_INET, ip.c_str(), &ipAddrBuf) == 1 ? Result::Success : 
-																		  Result::Fail;
+		Result result = inet_pton(AF_INET, ip.c_str(), &ipAddrBuf) == 1 ? Result::Success :
+			Result::Fail;
 
 		if (result == Result::Success)
 		{
@@ -69,7 +58,7 @@ namespace CustomSocket
 				m_hostname = ip;
 
 				memcpy_s(m_ipBytes, IPv4_ADDRESS_SIZE,
-						 &ipAddrBuf.S_un.S_addr, IPv4_ADDRESS_SIZE);
+					&ipAddrBuf.S_un.S_addr, IPv4_ADDRESS_SIZE);
 
 				m_ipVersion = IPVersion::IPv4;
 			}
@@ -86,7 +75,7 @@ namespace CustomSocket
 
 			addrinfo* hostinfo = nullptr;
 			result = getaddrinfo(ip.c_str(), nullptr, &addrSettings, &hostinfo) != 0 ? Result::Fail :
-																					  Result::Success;
+				Result::Success;
 
 			if (result == Result::Success)
 			{
@@ -101,7 +90,7 @@ namespace CustomSocket
 				inet_ntop(AF_INET, &hostAddr->sin_addr, &m_ipString[0], 16);
 
 				memcpy_s(m_ipBytes, IPv4_ADDRESS_SIZE,
-						 &hostAddr->sin_addr.S_un.S_addr, IPv4_ADDRESS_SIZE);
+					&hostAddr->sin_addr.S_un.S_addr, IPv4_ADDRESS_SIZE);
 			}
 		}
 
@@ -111,7 +100,7 @@ namespace CustomSocket
 		}
 	}
 
-	IPEndpoint::IPEndpoint(sockaddr* addr):
+	IPEndpoint::IPEndpoint(sockaddr* addr) :
 		m_ipBytes(new uint8_t[IPv4_ADDRESS_SIZE])
 	{
 		if (addr->sa_family != AF_INET)
@@ -152,7 +141,7 @@ namespace CustomSocket
 		return m_ipBytes;
 	}
 
-	uint16_t IPEndpoint::GetPort()
+	uint16_t IPEndpoint::GetPort() const
 	{
 		return m_port;
 	}
@@ -202,4 +191,3 @@ namespace CustomSocket
 		return outputStream;
 	}
 }
-

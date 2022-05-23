@@ -11,19 +11,20 @@ namespace CustomSocket
 	class IPEndpoint
 	{
 	public:
+		IPEndpoint() = default;
 		IPEndpoint(const std::string& ip, uint16_t port);
 		IPEndpoint(sockaddr* addr);
 		~IPEndpoint() = default;
-		
+
 		IPVersion GetIPVersion();
 		std::string GetHostname();
 		std::string GetIPString();
 		uint8_t* GetIPBytes();
-		uint16_t GetPort();
+		uint16_t GetPort() const;
 
 		sockaddr_in GetSockaddrIPv4();
 	public:
-		friend std::ostream& operator << (std::ostream& outputStream, 
+		friend std::ostream& operator << (std::ostream& outputStream,
 										  const IPEndpoint& obj);
 	private:
 		std::string m_hostname;

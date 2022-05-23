@@ -12,6 +12,14 @@ namespace CustomSocket
         }
     }
 
+    Socket::~Socket()
+    {
+        //if (m_handle != INVALID_SOCKET)
+        //{
+        //    Close();
+        //}
+    }
+
     Result Socket::Create()
     {
         if (m_IPVersion != IPVersion::IPv4)
@@ -110,14 +118,14 @@ namespace CustomSocket
         return result;
     }
 
-    Result Socket::Accept(Socket& outSocket)
+    Result Socket::Accept(Socket& outSocket, IPEndpoint* outEndpoint)
     {
         sockaddr_in addr = {};
         int addr_len = sizeof(sockaddr_in);
         //sizeof
-        SocketHandle acceptedConnectionHandle = accept(m_handle, 
-                                                       reinterpret_cast<sockaddr*>(&addr), 
-                                                       &addr_len); //Blocking Func
+        SocketHandle acceptedConnectionHandle = accept(m_handle,
+            reinterpret_cast<sockaddr*>(&addr),
+            &addr_len); //Blocking Func
 
         Result result = (acceptedConnectionHandle == INVALID_SOCKET) ? Result::Fail : Result::Success;
 
@@ -133,12 +141,19 @@ namespace CustomSocket
             outSocket.SetHandle(acceptedConnectionHandle);
             outSocket.SetIPVersion(IPVersion::IPv4);
 
-            IPEndpoint newConnectionEndpoint(reinterpret_cast<sockaddr*>(&addr));
+            if (outEndpoint != nullptr)
+            {
+                *outEndpoint = IPEndpoint(reinterpret_cast<sockaddr*>(&addr));
 
+            }
+
+            /**
+            IPEndpoint newConnectionEndpoint(reinterpret_cast<sockaddr*>(&addr));
             std::cout << "New connection accepted." << std::endl;
             std::cout << newConnectionEndpoint;
+            **/
         }
-        
+
 
         return result;
     }

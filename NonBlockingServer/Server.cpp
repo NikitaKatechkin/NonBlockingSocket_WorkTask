@@ -220,7 +220,7 @@ void Server::inspectAllConnections()
 					== CustomSocket::Result::Success)
 				{
 					std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
-					std::cout << " bytes sent}" << std::endl;
+					std::cout << " bytes sent }" << std::endl;
 					m_writeFlag[index + 1] = false;
 					//m_connection[index].first.Close();
 					//disconnect(m_connection[index].second.GetPort());

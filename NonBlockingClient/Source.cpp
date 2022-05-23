@@ -84,6 +84,29 @@ int main()
 					std::cout << "[SERVICE INFO]: ";
 					std::cout << "Socket was successfully connected." << std::endl;
 					std::cout << IPToConnect;
+
+					const int bufSize = 256;
+					char buffer[bufSize] = "Hello world from client)))\0";
+
+					CustomSocket::Result sendFlag = CustomSocket::Result::Fail;
+
+					while (sendFlag == CustomSocket::Result::Fail)
+					{
+						std::cout << "[SERVICE INFO]: ";
+						std::cout << "Attempting to send data to server..." << std::endl;
+
+						sendFlag = client_socket.SendAll(buffer, const_cast<int&>(bufSize));
+
+						if (sendFlag != CustomSocket::Result::Success)
+						{
+							std::this_thread::sleep_for(std::chrono::milliseconds(500));
+						}
+						else
+						{
+							std::cout << "[SERVICE INFO]: ";
+							std::cout << "Data were successfully sent." << std::endl;
+						}
+					}
 				}
 				else
 				{

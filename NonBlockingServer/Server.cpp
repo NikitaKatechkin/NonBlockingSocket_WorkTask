@@ -121,17 +121,23 @@ CustomSocket::Result Server::connect()
 		std::cout << "{STATUS = CONNECTED}" << std::endl;
 
 		//ACCEPTING-REGISTRATING ROUTINE STARTS
+		
+		result = newConnection.SetSocketOption(CustomSocket::Option::IO_NonBlocking, TRUE);
 
-		m_connection.push_back(CONNECTION_INFO(newConnection, newConnectionEndpoint));
+		if (result == CustomSocket::Result::Success)
+		{
+			m_connection.push_back(CONNECTION_INFO(newConnection, newConnectionEndpoint));
 
-		WSAPOLLFD listeningSocketFD = { m_listeningSocket.GetHandle(), 
-										(POLLRDNORM | POLLWRNORM), 
-										0 };
+			WSAPOLLFD listeningSocketFD = { newConnection.GetHandle(),
+											(POLLRDNORM | POLLWRNORM),
+											0 };
 
-		m_socketFDs.push_back(listeningSocketFD);
+			m_socketFDs.push_back(listeningSocketFD);
 
-		std::cout << "[SERVICE INFO]: " << "Pool size = ";
-		std::cout << m_connection.size() << "." << std::endl;
+			std::cout << "[SERVICE INFO]: " << "Pool size = ";
+			std::cout << m_connection.size() << "." << std::endl;
+		}
+		
 
 		//ACCEPTING-REGISTRATING ROUTINE ENDS
 	}
@@ -158,18 +164,15 @@ void Server::processLoop()
 			{
 				if (connect() == CustomSocket::Result::Success)
 				{
-					if (disconnect(m_connection.back().second.GetPort())
-						== CustomSocket::Result::Fail)
-					{
-						break;
-					}
+					//if (disconnect(m_connection.back().second.GetPort())
+					//	== CustomSocket::Result::Fail)
+					//{
+					//	break;
+					//}
 				}
 			}
 
-			if (numOfAccuredEvents > 1)
-			{
-				inspectAllConnections();
-			}
+			inspectAllConnections();
 		}
 	}
 }
@@ -181,12 +184,23 @@ void Server::inspectAllConnections()
 		if (m_socketFDs[index + 1].revents & POLLRDNORM)
 		{
 			//READ
-			std::cout << "Reading..." << std::endl;
+			//std::cout << "Reading..." << std::endl;
+
+			char buffer[256] = {};
+			int bytesRecieved = 0;
+
+			if (m_connection[index].first.Recieve(buffer, 256, bytesRecieved)
+				== CustomSocket::Result::Success)
+			{
+				std::cout << "[CLIENT]: " << buffer << std::endl;
+				m_connection[index].first.Close();
+				//disconnect(m_connection[index].second.GetPort());
+			}
 		}
 		if (m_socketFDs[index + 1].revents & POLLWRNORM)
 		{
 			//WRITE
-			std::cout << "Writing..." << std::endl;
+			//std::cout << "Writing..." << std::endl;
 		}
 	}
 }

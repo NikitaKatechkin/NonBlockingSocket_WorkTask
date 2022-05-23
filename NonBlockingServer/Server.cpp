@@ -170,9 +170,16 @@ void Server::processLoop()
 					//	break;
 					//}
 				}
-			}
 
-			inspectAllConnections();
+				if (numOfAccuredEvents > 1)
+				{
+					inspectAllConnections();
+				}
+			}
+			else
+			{
+				inspectAllConnections();
+			}
 		}
 	}
 }

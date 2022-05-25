@@ -86,6 +86,47 @@ Server::Server(const CustomSocket::IPEndpoint& IPconfig) :
 	m_socketService[LISTENING_FD_INDEX].m_onWriteFlag = false;
 }
 
+Server::Server(const std::string& ip, const uint16_t port) :
+	m_isRunning(false),
+	m_getInfoEvent(CreateEvent(nullptr, TRUE, FALSE, L"ServiceEvent"))
+{
+	if (m_getInfoEvent == NULL)
+	{
+		throw std::exception();
+	}
+
+	if (CustomSocket::NetworkAPIInitializer::Initialize() != true)
+	{
+		throw std::exception();
+	}
+
+	m_socketService.push_back(ConnectionService());
+
+	m_socketService[LISTENING_FD_INDEX].m_socketInfo.second = CustomSocket::IPEndpoint(ip, port);
+	if (m_socketService[LISTENING_FD_INDEX].m_socketInfo.first.Create()
+		!= CustomSocket::Result::Success)
+	{
+		throw std::exception();
+	}
+
+	if (m_socketService[LISTENING_FD_INDEX].m_socketInfo.first.SetSocketOption(
+		CustomSocket::Option::IO_NonBlocking, TRUE) != CustomSocket::Result::Success)
+	{
+		throw std::exception();
+	}
+
+	m_socketService[LISTENING_FD_INDEX].m_socketFD = WSAPOLLFD(
+		{ m_socketService[LISTENING_FD_INDEX].m_socketInfo.first.GetHandle(),
+		  (POLLRDNORM),
+		  0 });
+
+	m_socketService[LISTENING_FD_INDEX].m_readBuffer = nullptr;
+	m_socketService[LISTENING_FD_INDEX].m_onReadFlag = false;
+
+	m_socketService[LISTENING_FD_INDEX].m_writeBuffer = nullptr;
+	m_socketService[LISTENING_FD_INDEX].m_onWriteFlag = false;
+}
+
 /**
 CustomSocket::Result Server::run()
 {

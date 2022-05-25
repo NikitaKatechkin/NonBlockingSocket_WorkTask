@@ -87,7 +87,8 @@ int main()
 	return 0;
 	**/
 
-	Server server(CustomSocket::IPEndpoint("127.0.0.1", 4790));
+	//Server server(CustomSocket::IPEndpoint("127.0.0.1", 4790));
+	Server server("127.0.0.1", 4790);
 	
 	server.run();
 

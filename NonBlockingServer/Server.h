@@ -23,7 +23,9 @@ protected:
 	};
 
 public:
-	Server(const CustomSocket::IPEndpoint& IPconfig); //TODO: classic interface with ip + port
+	Server(const CustomSocket::IPEndpoint& IPconfig);
+	Server(const std::string& ip, const uint16_t port);
+
 	~Server() = default;
 
 public:

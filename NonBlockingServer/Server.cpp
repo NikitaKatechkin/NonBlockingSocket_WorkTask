@@ -421,22 +421,18 @@ CustomSocket::Result Server::connect()
 
 CustomSocket::Result Server::connect()
 {
-	//TODO: FIX ~SOCKET::SOCKET()
-	//AND MAKE SOLUTION WITHOUT FANCY DISTRUCT
-	//OR
-	//MOVE Semantics
+	m_socketService.push_back(ConnectionService());
 
-	CustomSocket::Socket newConnection;
-	CustomSocket::IPEndpoint newConnectionEndpoint;
 
-	auto result = m_socketService[LISTENING_FD_INDEX].m_socketInfo.first.Accept(newConnection, 
-																			&newConnectionEndpoint);
+	auto result = m_socketService[LISTENING_FD_INDEX].m_socketInfo.first.Accept(
+														m_socketService.back().m_socketInfo.first,
+														&m_socketService.back().m_socketInfo.second);
 
 	if (result == CustomSocket::Result::Success)
 	{
-		std::cout << "[CLIENT]: " << "{IP = " << newConnectionEndpoint.GetIPString();
-		std::cout << "} {PORT = " << newConnectionEndpoint.GetPort() << "} ";
-		std::cout << "{STATUS = CONNECTED}" << std::endl;
+		CustomSocket::Socket& newConnection = m_socketService.back().m_socketInfo.first;
+		CustomSocket::IPEndpoint& newConnectionEndpoint = m_socketService.back().m_socketInfo.second;
+
 
 		//ACCEPTING-REGISTRATING ROUTINE STARTS
 
@@ -444,9 +440,6 @@ CustomSocket::Result Server::connect()
 
 		if (result == CustomSocket::Result::Success)
 		{
-			m_socketService.push_back(ConnectionService());
-			m_socketService.back().m_socketInfo = CONNECTION_INFO(newConnection, 
-																  newConnectionEndpoint);
 			m_socketService.back().m_socketFD = { newConnection.GetHandle(),
 												  (POLLRDNORM | POLLWRNORM),
 												  0 };
@@ -459,6 +452,10 @@ CustomSocket::Result Server::connect()
 
 			SetEvent(m_getInfoEvent);
 
+			std::cout << "[CLIENT]: " << "{IP = " << newConnectionEndpoint.GetIPString();
+			std::cout << "} {PORT = " << newConnectionEndpoint.GetPort() << "} ";
+			std::cout << "{STATUS = CONNECTED}" << std::endl;
+
 			std::cout << "[SERVICE INFO]: " << "Pool size = ";
 			std::cout << m_socketService.size() << "." << std::endl;
 		}
@@ -468,6 +465,8 @@ CustomSocket::Result Server::connect()
 	}
 	else
 	{
+		m_socketService.pop_back();
+
 		std::cout << "[SERVICE INFO]: ";
 		std::cout << "Failed to accept new connection." << std::endl;
 	}
@@ -630,9 +629,6 @@ void Server::inspectAllConnections()
 
 		if (item.m_socketFD.revents & POLLRDNORM)
 		{
-			//TODO:
-			//READ -> CREATE OnRecieve() function
-			//+ rename flags
 			/**if (item.m_onReadFlag == true)
 			{
 				int bytesRecieved = 0;
@@ -663,9 +659,6 @@ void Server::inspectAllConnections()
 
 		if (item.m_socketFD.revents & POLLWRNORM)
 		{
-			//TODO:
-			//WRITE -> CREATE OnSend() function
-			//+ rename flags
 			/**if (item.m_onWriteFlag == true)
 			{
 				int bytesSent = 0;

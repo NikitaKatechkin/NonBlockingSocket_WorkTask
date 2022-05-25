@@ -80,10 +80,10 @@ Server::Server(const CustomSocket::IPEndpoint& IPconfig) :
 								  0 });
 
 	m_socketService[LISTENING_FD_INDEX].m_readBuffer = nullptr;
-	m_socketService[LISTENING_FD_INDEX].m_onReadFlag = false;
+	m_socketService[LISTENING_FD_INDEX].m_onRecieveFlag = false;
 
 	m_socketService[LISTENING_FD_INDEX].m_writeBuffer = nullptr;
-	m_socketService[LISTENING_FD_INDEX].m_onWriteFlag = false;
+	m_socketService[LISTENING_FD_INDEX].m_onSendFlag = false;
 }
 
 Server::Server(const std::string& ip, const uint16_t port) :
@@ -121,10 +121,10 @@ Server::Server(const std::string& ip, const uint16_t port) :
 		  0 });
 
 	m_socketService[LISTENING_FD_INDEX].m_readBuffer = nullptr;
-	m_socketService[LISTENING_FD_INDEX].m_onReadFlag = false;
+	m_socketService[LISTENING_FD_INDEX].m_onRecieveFlag = false;
 
 	m_socketService[LISTENING_FD_INDEX].m_writeBuffer = nullptr;
-	m_socketService[LISTENING_FD_INDEX].m_onWriteFlag = false;
+	m_socketService[LISTENING_FD_INDEX].m_onSendFlag = false;
 }
 
 /**
@@ -222,7 +222,7 @@ CustomSocket::Result Server::read(void* data, const uint16_t port)
 }
 **/
 
-CustomSocket::Result Server::read(void* data, const uint16_t port)
+CustomSocket::Result Server::recieve(void* data, const uint16_t port)
 {
 	auto find_iter = std::find_if(
 		m_socketService.begin(),
@@ -236,7 +236,7 @@ CustomSocket::Result Server::read(void* data, const uint16_t port)
 	if (result == CustomSocket::Result::Success)
 	{
 		find_iter->m_readBuffer = static_cast<char*>(data);
-		find_iter->m_onReadFlag = true;
+		find_iter->m_onRecieveFlag = true;
 	}
 
 	return result;
@@ -266,7 +266,7 @@ CustomSocket::Result Server::write(const void* data, const uint16_t port)
 }
 **/
 
-CustomSocket::Result Server::write(const void* data, const uint16_t port)
+CustomSocket::Result Server::send(const void* data, const uint16_t port)
 {
 	auto find_iter = std::find_if(
 		m_socketService.begin(),
@@ -280,7 +280,7 @@ CustomSocket::Result Server::write(const void* data, const uint16_t port)
 	if (result == CustomSocket::Result::Success)
 	{
 		find_iter->m_writeBuffer = static_cast<const char*>(data);
-		find_iter->m_onWriteFlag = true;
+		find_iter->m_onSendFlag = true;
 	}
 
 	return result;
@@ -451,10 +451,10 @@ CustomSocket::Result Server::connect()
 												  (POLLRDNORM | POLLWRNORM),
 												  0 };
 
-			m_socketService.back().m_onReadFlag = false;
+			m_socketService.back().m_onRecieveFlag = false;
 			m_socketService.back().m_readBuffer = nullptr;
 
-			m_socketService.back().m_onWriteFlag = false;
+			m_socketService.back().m_onSendFlag = false;
 			m_socketService.back().m_writeBuffer = nullptr;
 
 			SetEvent(m_getInfoEvent);
@@ -658,7 +658,7 @@ void Server::inspectAllConnections()
 					item.m_onWriteFlag = true;
 				}
 			}**/
-			OnRead(item);
+			OnRecieve(item);
 		}
 
 		if (item.m_socketFD.revents & POLLWRNORM)
@@ -689,14 +689,14 @@ void Server::inspectAllConnections()
 				}
 			}
 			**/
-			OnWrite(item);
+			OnSend(item);
 		}
 	}
 }
 
-void Server::OnRead(ConnectionService& connection)
+void Server::OnRecieve(ConnectionService& connection)
 {
-	if (connection.m_onReadFlag == true)
+	if (connection.m_onRecieveFlag == true)
 	{
 		int bytesRecieved = 0;
 
@@ -713,19 +713,19 @@ void Server::OnRead(ConnectionService& connection)
 			{
 				//std::cout << "[CLIENT]: " << buffer << std::endl;
 				std::cout << "[CLIENT]: " << (connection.m_readBuffer) << std::endl;
-				connection.m_onReadFlag = false;
+				connection.m_onRecieveFlag = false;
 			}
 
 
 			//TODO: remove
-			connection.m_onWriteFlag = true;
+			connection.m_onSendFlag = true;
 		}
 	}
 }
 
-void Server::OnWrite(ConnectionService& connection)
+void Server::OnSend(ConnectionService& connection)
 {
-	if (connection.m_onWriteFlag == true)
+	if (connection.m_onSendFlag == true)
 	{
 		int bytesSent = 0;
 
@@ -742,7 +742,7 @@ void Server::OnWrite(ConnectionService& connection)
 			{
 				std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
 				std::cout << " bytes sent }" << std::endl;
-				connection.m_onWriteFlag = false;
+				connection.m_onSendFlag = false;
 
 			}
 		}

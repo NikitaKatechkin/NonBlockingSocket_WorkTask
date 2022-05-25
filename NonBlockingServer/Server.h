@@ -16,10 +16,10 @@ protected:
 		WSAPOLLFD m_socketFD;
 
 		const char* m_writeBuffer = nullptr;
-		bool m_onWriteFlag = false;
+		bool m_onSendFlag = false;
 
 		char* m_readBuffer = nullptr;
-		bool m_onReadFlag = false;
+		bool m_onRecieveFlag = false;
 	};
 
 public:
@@ -32,8 +32,8 @@ public:
 	CustomSocket::Result run();
 	CustomSocket::Result stop();
 
-	CustomSocket::Result read(void* data, const uint16_t port);
-	CustomSocket::Result write(const void* data, const uint16_t port);
+	CustomSocket::Result recieve(void* data, const uint16_t port);
+	CustomSocket::Result send(const void* data, const uint16_t port);
 
 	void waitForConnection();
 protected:
@@ -43,8 +43,8 @@ protected:
 	void processLoop();
 	void inspectAllConnections();
 
-	void OnRead(ConnectionService& connection);
-	void OnWrite(ConnectionService& connection);
+	void OnRecieve(ConnectionService& connection);
+	void OnSend(ConnectionService& connection);
 
 protected:
 	std::vector<ConnectionService> m_socketService;

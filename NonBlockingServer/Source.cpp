@@ -91,7 +91,15 @@ int main()
 	
 	server.run();
 
-	std::this_thread::sleep_for(std::chrono::seconds(15));
+	server.waitForConnection();
+	
+	char readBuffer[256] = {};
+	server.read(readBuffer, 4791);
+
+	const char writeBuffer[256] = { "Hello world from server)))\0" };
+	server.write(writeBuffer, 4791);
+
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	server.stop();
 

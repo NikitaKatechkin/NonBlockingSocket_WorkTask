@@ -77,55 +77,67 @@ int main()
 				std::cout << "[SERVICE INFO]: ";
 				std::cout << "Socket was successfully switched to Blocking state." << std::endl;
 
-				CustomSocket::IPEndpoint IPToConnect("127.0.0.1", 4790);
+				CustomSocket::IPEndpoint IPToListen("127.0.0.1", 4791);
 
-				if (client_socket.Connect(IPToConnect) == CustomSocket::Result::Success)
+				if (client_socket.Bind(IPToListen) == CustomSocket::Result::Success)
 				{
-					std::cout << "[SERVICE INFO]: ";
-					std::cout << "Socket was successfully connected." << std::endl;
-					std::cout << IPToConnect;
+					CustomSocket::IPEndpoint IPToConnect("127.0.0.1", 4790);
 
-					const int bufSize = 256;
-					char buffer[bufSize] = "Hello world from client)))\0";
-
-					CustomSocket::Result sendFlag = CustomSocket::Result::Fail;
-
-					while (sendFlag == CustomSocket::Result::Fail)
+					if (client_socket.Connect(IPToConnect) == CustomSocket::Result::Success)
 					{
 						std::cout << "[SERVICE INFO]: ";
-						std::cout << "Attempting to send data to server..." << std::endl;
+						std::cout << "Socket was successfully connected." << std::endl;
+						std::cout << IPToConnect;
 
-						sendFlag = client_socket.SendAll(buffer, const_cast<int&>(bufSize));
+						const int bufSize = 256;
+						char buffer[bufSize] = "Hello world from client)))\0";
 
-						if (sendFlag != CustomSocket::Result::Success)
-						{
-							std::this_thread::sleep_for(std::chrono::milliseconds(500));
-						}
-						else
+						CustomSocket::Result sendFlag = CustomSocket::Result::Fail;
+
+						while (sendFlag == CustomSocket::Result::Fail)
 						{
 							std::cout << "[SERVICE INFO]: ";
-							std::cout << "Data were successfully sent." << std::endl;
+							std::cout << "Attempting to send data to server..." << std::endl;
+
+							sendFlag = client_socket.SendAll(buffer, const_cast<int&>(bufSize));
+
+							if (sendFlag != CustomSocket::Result::Success)
+							{
+								std::this_thread::sleep_for(std::chrono::milliseconds(500));
+							}
+							else
+							{
+								std::cout << "[SERVICE INFO]: ";
+								std::cout << "Data were successfully sent." << std::endl;
+							}
+						}
+
+						CustomSocket::Result result = CustomSocket::Result::Fail;
+						while (result != CustomSocket::Result::Success)
+						{
+							//result = newConnection.Recieve(buffer, 256, bytesRecieved);
+							int numberOfBytes = 256;
+							result = client_socket.RecieveAll(buffer, numberOfBytes);
+							if (result == CustomSocket::Result::Success)
+							{
+								std::cout << "[SERVER]: " << buffer << std::endl;
+								break;
+							}
 						}
 					}
-
-					CustomSocket::Result result = CustomSocket::Result::Fail;
-					while (result != CustomSocket::Result::Success)
+					else
 					{
-						//result = newConnection.Recieve(buffer, 256, bytesRecieved);
-						int numberOfBytes = 256;
-						result = client_socket.RecieveAll(buffer, numberOfBytes);
-						if (result == CustomSocket::Result::Success)
-						{
-							std::cout << "[SERVER]: " << buffer << std::endl;
-							break;
-						}
+						std::cerr << "[SERVICE INFO]: ";
+						std::cerr << "Failed to connect to IP = " << IPToConnect.GetIPString();
+						std::cerr << " port " << IPToConnect.GetPort() << "." << std::endl;
 					}
 				}
 				else
 				{
 					std::cerr << "[SERVICE INFO]: ";
-					std::cerr << "Failed to connect to IP = " << IPToConnect.GetIPString();
-					std::cerr << " port " << IPToConnect.GetPort() << "." << std::endl;
+					std::cerr << "Failed to set the socket to listen ip = ";
+					std::cerr << IPToListen.GetIPString();
+					std::cerr << " on port " << IPToListen.GetPort() << "." << std::endl;
 				}
 			}
 			else

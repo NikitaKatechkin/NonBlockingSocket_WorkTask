@@ -7,19 +7,14 @@ static const size_t LISTENING_FD_INDEX = 0;
 Server::Server(const CustomSocket::IPEndpoint& IPconfig):
 	m_IPConfig(IPconfig), m_isRunning(false)
 {
+	if (CustomSocket::NetworkAPIInitializer::Initialize() != true)
+	{
+		throw std::exception();
+	}
+
 	if (m_listeningSocket.Create() != CustomSocket::Result::Success)
 	{
-		if (CustomSocket::NetworkAPIInitializer::Initialize() != true)
-		{
-			throw std::exception();
-		}
-		else
-		{
-			if (m_listeningSocket.Create() != CustomSocket::Result::Success)
-			{
-				throw std::exception();
-			}
-		}
+		throw std::exception();
 	}
 
 	if (m_listeningSocket.SetSocketOption(CustomSocket::Option::IO_NonBlocking, TRUE) !=
@@ -28,20 +23,23 @@ Server::Server(const CustomSocket::IPEndpoint& IPconfig):
 		throw std::exception();
 	}
 
-	//if (m_listeningSocket.Listen(m_IPConfig) != CustomSocket::Result::Success)
-	//{
-	//	throw std::exception();
-	//}
+	m_getInfoEvent = CreateEvent(nullptr, TRUE, FALSE, L"ServiceEvent");
+	if (m_getInfoEvent == NULL)
+	{
+		throw std::exception();
+	}
 
 	WSAPOLLFD listeningSocketFD = { m_listeningSocket.GetHandle(),
 									(POLLRDNORM),
 									0 };
-	//listeningSocketFD.fd = m_listeningSocket.GetHandle();
-	//listeningSocketFD.events = POLLRDNORM; // I want
-	//listeningSocketFD.revents = 0; // I get
 
 	m_socketFDs.push_back(listeningSocketFD);
-	m_writeFlag.push_back(false);
+
+	m_onWriteFlag.push_back(false);
+	m_writeBuffer.push_back(nullptr);
+
+	m_onReadFlag.push_back(false);
+	m_readBuffer.push_back(nullptr);
 }
 
 CustomSocket::Result Server::run()
@@ -77,6 +75,55 @@ CustomSocket::Result Server::stop()
 	return result;
 }
 
+CustomSocket::Result Server::read(void* data, const uint16_t port)
+{
+	auto find_iter = std::find_if(
+		m_connection.begin(),
+		m_connection.end(),
+		[&port](CONNECTION_INFO info) { return info.second.GetPort() == port; });
+
+	CustomSocket::Result result = (find_iter != m_connection.end()) ? CustomSocket::Result::Success :
+		CustomSocket::Result::Fail;
+
+
+	if (result == CustomSocket::Result::Success)
+	{
+		size_t index = (find_iter - m_connection.begin());
+
+		m_readBuffer[index + 1] = static_cast<char*>(data);
+		m_onReadFlag[index + 1] = true;
+	}
+
+	return result;
+}
+
+CustomSocket::Result Server::write(const void* data, const uint16_t port)
+{
+	auto find_iter = std::find_if(
+		m_connection.begin(),
+		m_connection.end(),
+		[&port](CONNECTION_INFO info) { return info.second.GetPort() == port; });
+
+	CustomSocket::Result result = (find_iter != m_connection.end()) ? CustomSocket::Result::Success :
+		CustomSocket::Result::Fail;
+
+
+	if (result == CustomSocket::Result::Success)
+	{
+		size_t index = (find_iter - m_connection.begin());
+
+		m_writeBuffer[index + 1] = static_cast<const char*>(data);
+		m_onWriteFlag[index + 1] = true;
+	}
+
+	return result;
+}
+
+void Server::waitForConnection()
+{
+	WaitForSingleObject(m_getInfoEvent, INFINITE);
+}
+
 CustomSocket::Result Server::disconnect(const uint16_t port)
 {
 	auto portToDisconnect = std::find_if(
@@ -101,7 +148,10 @@ CustomSocket::Result Server::disconnect(const uint16_t port)
 
 		size_t portToDisconnectIndex = portToDisconnect - m_connection.begin();
 		m_socketFDs.erase(m_socketFDs.begin() + portToDisconnectIndex + 1);
-		m_writeFlag.erase(m_writeFlag.begin() + portToDisconnectIndex + 1);
+		m_onWriteFlag.erase(m_onWriteFlag.begin() + portToDisconnectIndex + 1);
+		m_writeBuffer.erase(m_writeBuffer.begin() + portToDisconnectIndex + 1);
+		m_onReadFlag.erase(m_onReadFlag.begin() + portToDisconnectIndex + 1);
+		m_readBuffer.erase(m_readBuffer.begin() + portToDisconnectIndex + 1);
 
 		m_connection.erase(portToDisconnect);
 	}
@@ -111,6 +161,11 @@ CustomSocket::Result Server::disconnect(const uint16_t port)
 
 CustomSocket::Result Server::connect()
 {
+	//TODO: FIX ~SOCKET::SOCKET()
+	//AND MAKE SOLUTION WITHOUT FANCY DISTRUCT
+	//OR
+	//MOVE Semantics
+
 	CustomSocket::Socket newConnection;
 	CustomSocket::IPEndpoint newConnectionEndpoint;
 
@@ -135,7 +190,13 @@ CustomSocket::Result Server::connect()
 											0 };
 
 			m_socketFDs.push_back(listeningSocketFD);
-			m_writeFlag.push_back(false);
+			m_onWriteFlag.push_back(false);
+			m_writeBuffer.push_back(nullptr);
+
+			m_onReadFlag.push_back(false);
+			m_readBuffer.push_back(nullptr);
+
+			SetEvent(m_getInfoEvent);
 
 			std::cout << "[SERVICE INFO]: " << "Pool size = ";
 			std::cout << m_connection.size() << "." << std::endl;
@@ -165,13 +226,9 @@ void Server::processLoop()
 		{
 			if (m_socketFDs[LISTENING_FD_INDEX].revents & POLLRDNORM)
 			{
-				if (connect() == CustomSocket::Result::Success)
+				if (connect() != CustomSocket::Result::Success)
 				{
-					//if (disconnect(m_connection.back().second.GetPort())
-					//	== CustomSocket::Result::Fail)
-					//{
-					//	break;
-					//}
+					break;
 				}
 
 				if (numOfAccuredEvents > 1)
@@ -184,6 +241,11 @@ void Server::processLoop()
 				inspectAllConnections();
 			}
 		}
+
+		if (m_connection.empty() == true)
+		{
+			ResetEvent(m_getInfoEvent);
+		}
 	}
 }
 
@@ -193,37 +255,63 @@ void Server::inspectAllConnections()
 	{
 		if (m_socketFDs[index + 1].revents & POLLRDNORM)
 		{
-			//READ
-			//std::cout << "Reading..." << std::endl;
-
-			char buffer[256] = {};
-			int bytesRecieved = 0;
-
-			if (m_connection[index].first.Recieve(buffer, 256, bytesRecieved)
-				== CustomSocket::Result::Success)
+			//TODO:
+			//READ -> CREATE OnRecieve() function
+			//+ rename flags
+			if (m_onReadFlag[index + 1] == true)
 			{
-				std::cout << "[CLIENT]: " << buffer << std::endl;
-				m_writeFlag[index + 1] = true;
-				//m_connection[index].first.Close();
-				//disconnect(m_connection[index].second.GetPort());
+				char buffer[256] = {};
+				int bytesRecieved = 0;
+
+				if (m_connection[index].first.Recieve(m_readBuffer[index + 1], 256, bytesRecieved)
+					== CustomSocket::Result::Success)
+				{
+					if (bytesRecieved == 0)
+					{
+						//CLIENT WAS DISCONNECTED
+
+						disconnect(m_connection[index].second.GetPort());
+					}
+					else
+					{
+						//std::cout << "[CLIENT]: " << buffer << std::endl;
+						std::cout << "[CLIENT]: " << (m_readBuffer[index + 1]) << std::endl;
+						m_onReadFlag[index + 1] = false;
+					}
+					
+
+					//TODO: remove
+					m_onWriteFlag[index + 1] = true;
+				}
 			}
 		}
+
 		if (m_socketFDs[index + 1].revents & POLLWRNORM)
 		{
-			//WRITE
-			if (m_writeFlag[index + 1] == true)
+			//TODO:
+			//WRITE -> CREATE OnSend() function
+			//+ rename flags
+			if (m_onWriteFlag[index + 1] == true)
 			{
 				const char buffer[256] = { "Hello, world)))\0" };
 				int bytesSent = 0;
 
-				if (m_connection[index].first.Send(const_cast<char*>(buffer), 256, bytesSent)
+				if (m_connection[index].first.Send(m_writeBuffer[index + 1], 256, bytesSent)
 					== CustomSocket::Result::Success)
 				{
-					std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
-					std::cout << " bytes sent }" << std::endl;
-					m_writeFlag[index + 1] = false;
-					//m_connection[index].first.Close();
-					//disconnect(m_connection[index].second.GetPort());
+					if (bytesSent == 0)
+					{
+						//CLIENT WAS DISCONNECTED
+
+						disconnect(m_connection[index].second.GetPort());
+					}
+					else
+					{
+						std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
+						std::cout << " bytes sent }" << std::endl;
+						m_onWriteFlag[index + 1] = false;
+
+					}
 				}
 			}
 		}

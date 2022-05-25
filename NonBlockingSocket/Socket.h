@@ -21,7 +21,7 @@ namespace CustomSocket
 		Result Accept(Socket& outSocket, IPEndpoint* outEndpoint = nullptr);
 		Result Connect(IPEndpoint endpoint);
 
-		Result Send(void* data, int numberOfBytes, int& bytesSent);
+		Result Send(const void* data, int numberOfBytes, int& bytesSent);
 		Result Recieve(void* destination, int numberOfBytes, int& bytesRecieved);
 
 		Result SendAll(void* data, int& numberOfBytes);

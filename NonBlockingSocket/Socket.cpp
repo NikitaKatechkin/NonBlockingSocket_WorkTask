@@ -176,7 +176,7 @@ namespace CustomSocket
         return result;
     }
 
-    Result Socket::Send(void* data, int numberOfBytes, int& bytesSent)
+    Result Socket::Send(const void* data, int numberOfBytes, int& bytesSent)
     {
         bytesSent = send(m_handle, reinterpret_cast<const char*>(data), numberOfBytes, NULL);
 

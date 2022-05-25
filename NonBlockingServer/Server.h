@@ -15,11 +15,11 @@ protected:
 		CONNECTION_INFO m_socketInfo;
 		WSAPOLLFD m_socketFD;
 
-		const char* m_writeBuffer;
-		bool m_onWriteFlag;
+		const char* m_writeBuffer = nullptr;
+		bool m_onWriteFlag = false;
 
-		char* m_readBuffer;
-		bool m_onReadFlag;
+		char* m_readBuffer = nullptr;
+		bool m_onReadFlag = false;
 	};
 
 public:
@@ -42,18 +42,7 @@ protected:
 	void inspectAllConnections();
 
 protected:
-	CustomSocket::IPEndpoint m_IPConfig;
-	CustomSocket::Socket m_listeningSocket;
-
-	//TODO: elegant vector of struct instead
-	CONNECTIONS m_connection;
-	std::vector<WSAPOLLFD> m_socketFDs;
-
-	std::vector<const char*> m_writeBuffer;
-	std::vector<bool> m_onWriteFlag;
-
-	std::vector<char*> m_readBuffer;
-	std::vector<bool> m_onReadFlag;
+	std::vector<ConnectionService> m_socketService;
 
 	bool m_isRunning;
 	HANDLE m_getInfoEvent;

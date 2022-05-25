@@ -43,6 +43,9 @@ protected:
 	void processLoop();
 	void inspectAllConnections();
 
+	void OnRead(ConnectionService& connection);
+	void OnWrite(ConnectionService& connection);
+
 protected:
 	std::vector<ConnectionService> m_socketService;
 

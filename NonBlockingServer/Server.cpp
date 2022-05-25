@@ -633,7 +633,7 @@ void Server::inspectAllConnections()
 			//TODO:
 			//READ -> CREATE OnRecieve() function
 			//+ rename flags
-			if (item.m_onReadFlag == true)
+			/**if (item.m_onReadFlag == true)
 			{
 				int bytesRecieved = 0;
 
@@ -657,7 +657,8 @@ void Server::inspectAllConnections()
 					//TODO: remove
 					item.m_onWriteFlag = true;
 				}
-			}
+			}**/
+			OnRead(item);
 		}
 
 		if (item.m_socketFD.revents & POLLWRNORM)
@@ -665,7 +666,7 @@ void Server::inspectAllConnections()
 			//TODO:
 			//WRITE -> CREATE OnSend() function
 			//+ rename flags
-			if (item.m_onWriteFlag == true)
+			/**if (item.m_onWriteFlag == true)
 			{
 				int bytesSent = 0;
 
@@ -686,6 +687,63 @@ void Server::inspectAllConnections()
 
 					}
 				}
+			}
+			**/
+			OnWrite(item);
+		}
+	}
+}
+
+void Server::OnRead(ConnectionService& connection)
+{
+	if (connection.m_onReadFlag == true)
+	{
+		int bytesRecieved = 0;
+
+		if (connection.m_socketInfo.first.Recieve(connection.m_readBuffer, 256, bytesRecieved)
+			== CustomSocket::Result::Success)
+		{
+			if (bytesRecieved == 0)
+			{
+				//CLIENT WAS DISCONNECTED
+
+				disconnect(connection.m_socketInfo.second.GetPort());
+			}
+			else
+			{
+				//std::cout << "[CLIENT]: " << buffer << std::endl;
+				std::cout << "[CLIENT]: " << (connection.m_readBuffer) << std::endl;
+				connection.m_onReadFlag = false;
+			}
+
+
+			//TODO: remove
+			connection.m_onWriteFlag = true;
+		}
+	}
+}
+
+void Server::OnWrite(ConnectionService& connection)
+{
+	if (connection.m_onWriteFlag == true)
+	{
+		int bytesSent = 0;
+
+		if (connection.m_socketInfo.first.Send(connection.m_writeBuffer, 256, bytesSent)
+			== CustomSocket::Result::Success)
+		{
+			if (bytesSent == 0)
+			{
+				//CLIENT WAS DISCONNECTED
+
+				disconnect(connection.m_socketInfo.second.GetPort());
+			}
+			else
+			{
+				std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
+				std::cout << " bytes sent }" << std::endl;
+				connection.m_onWriteFlag = false;
+
 			}
 		}
 	}

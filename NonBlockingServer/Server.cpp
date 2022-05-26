@@ -486,12 +486,14 @@ CustomSocket::Result Server::connect()
 		if (result == CustomSocket::Result::Success)
 		{
 			ConnectionService newConnectionService({
-				CONNECTION_INFO(newConnection, newConnectionEndpoint),
-				{ newConnection.GetHandle(), (POLLRDNORM | POLLWRNORM), 0},
+				CONNECTION_INFO(std::move(newConnection), newConnectionEndpoint),
+				{ INVALID_SOCKET, (POLLRDNORM | POLLWRNORM), 0},
 				nullptr, 0, false,
 				nullptr, 0, false
 				});
 
+
+			newConnectionService.m_socketFD.fd = newConnectionService.m_socketInfo.first.GetHandle();
 			m_connections.insert({ newConnectionEndpoint, newConnectionService });
 
 			SetEvent(m_getInfoEvent);

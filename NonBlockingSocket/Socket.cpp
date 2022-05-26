@@ -12,6 +12,19 @@ namespace CustomSocket
         }
     }
 
+    Socket::Socket(const Socket& socket)
+    {
+        m_handle = socket.m_handle;
+        m_IPVersion = socket.m_IPVersion;
+    }
+
+    Socket::Socket(Socket&& socket) noexcept
+    {
+        std::swap(m_handle, socket.m_handle);
+        std::swap(m_IPVersion, socket.m_IPVersion);
+        socket.m_handle = INVALID_SOCKET;
+    }
+
     Socket::~Socket()
     {
         //if (m_handle != INVALID_SOCKET)

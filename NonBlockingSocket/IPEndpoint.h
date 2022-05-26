@@ -18,7 +18,7 @@ namespace CustomSocket
 
 		IPVersion GetIPVersion();
 		std::string GetHostname();
-		std::string GetIPString();
+		std::string GetIPString() const;
 		uint8_t* GetIPBytes();
 		uint16_t GetPort() const;
 
@@ -26,6 +26,7 @@ namespace CustomSocket
 	public:
 		friend std::ostream& operator << (std::ostream& outputStream,
 										  const IPEndpoint& obj);
+		friend bool operator== (const IPEndpoint& c1, const IPEndpoint& c2);
 	private:
 		std::string m_hostname;
 

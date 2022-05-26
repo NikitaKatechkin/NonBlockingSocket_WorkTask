@@ -3,6 +3,7 @@
 #include <NonBlockingSocket/IncludeMe.h>
 #include <vector>
 #include <thread>
+#include <unordered_map>
 
 //TODO:
 //map using (unordered maybe)
@@ -31,6 +32,25 @@ protected:
 		bool m_onRecieveFlag = false;
 	};
 
+	struct IPEndpointHasher
+	{
+		std::size_t operator()(const CustomSocket::IPEndpoint& key) const
+		{
+			using std::size_t;
+			using std::hash;
+			using std::string;
+
+			return ((hash<string>()(key.GetIPString())
+				^ (hash<uint16_t>()(key.GetPort()) << 1)));
+		}
+	};
+
+	struct ListeningService
+	{
+		CONNECTION_INFO m_socketInfo;
+		WSAPOLLFD m_socketFD;
+	};
+
 public:
 	Server(const CustomSocket::IPEndpoint& IPconfig);
 	Server(const std::string& ip, const uint16_t port);
@@ -48,7 +68,7 @@ public:
 
 	void waitForConnection();
 protected:
-	CustomSocket::Result disconnect(const uint16_t port);
+	CustomSocket::Result disconnect(const std::string& ip, const uint16_t port);
 	CustomSocket::Result connect();
 
 	void processLoop();
@@ -58,7 +78,11 @@ protected:
 	void OnSend(const std::string& ip, const uint16_t port);
 
 protected:
-	std::vector<ConnectionService> m_socketService;
+	//std::vector<ConnectionService> m_socketService;
+
+	ListeningService m_listeningSocketService;
+
+	std::unordered_map<CustomSocket::IPEndpoint, ConnectionService, IPEndpointHasher> m_connections;
 
 	bool m_isRunning;
 	HANDLE m_getInfoEvent;

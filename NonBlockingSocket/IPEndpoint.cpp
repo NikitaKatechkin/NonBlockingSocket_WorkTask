@@ -131,7 +131,7 @@ namespace CustomSocket
 		return m_hostname;
 	}
 
-	std::string IPEndpoint::GetIPString()
+	std::string IPEndpoint::GetIPString() const
 	{
 		return m_ipString;
 	}
@@ -189,5 +189,10 @@ namespace CustomSocket
 		outputStream << "--------------------------------------------------" << std::endl;
 
 		return outputStream;
+	}
+	bool operator==(const IPEndpoint& c1, const IPEndpoint& c2)
+	{
+		return ((c1.m_ipString == c2.m_ipString) && 
+				(c1.m_port == c2.m_port));
 	}
 }

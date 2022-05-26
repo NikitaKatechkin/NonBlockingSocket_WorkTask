@@ -87,6 +87,8 @@ int main()
 	return 0;
 	**/
 
+	const int bufSize = 256;
+
 	//Server server(CustomSocket::IPEndpoint("127.0.0.1", 4790));
 	Server server("127.0.0.1", 4790);
 	
@@ -94,11 +96,11 @@ int main()
 
 	server.waitForConnection();
 	
-	char readBuffer[256] = {};
-	server.recieve(readBuffer, 4791);
+	char readBuffer[bufSize] = {};
+	server.recieve("127.0.0.1", 4791, readBuffer, bufSize);
 
-	const char writeBuffer[256] = { "Hello world from server)))\0" };
-	server.send(writeBuffer, 4791);
+	const char writeBuffer[bufSize] = { "Hello world from server)))\0" };
+	server.send("127.0.0.1", 4791, writeBuffer, bufSize);
 
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 

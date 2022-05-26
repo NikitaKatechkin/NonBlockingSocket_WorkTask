@@ -4,6 +4,11 @@
 #include <vector>
 #include <thread>
 
+//TODO:
+//map using (unordered maybe)
+//socket should not have copy opersstion alowed
+
+
 class Server
 {
 protected:
@@ -16,9 +21,13 @@ protected:
 		WSAPOLLFD m_socketFD;
 
 		const char* m_writeBuffer = nullptr;
+		int m_bytesToSend = 0;
+
 		bool m_onSendFlag = false;
 
 		char* m_readBuffer = nullptr;
+		int m_bytesToRecieve = 0;
+
 		bool m_onRecieveFlag = false;
 	};
 
@@ -32,8 +41,10 @@ public:
 	CustomSocket::Result run();
 	CustomSocket::Result stop();
 
-	CustomSocket::Result recieve(void* data, const uint16_t port);
-	CustomSocket::Result send(const void* data, const uint16_t port);
+	CustomSocket::Result recieve(const std::string& ip, const uint16_t port, 
+								 void* data, int numberOfBytes);
+	CustomSocket::Result send(const std::string& ip, const uint16_t port, 
+							  const void* data, int numberOfBytes);
 
 	void waitForConnection();
 protected:
@@ -43,8 +54,8 @@ protected:
 	void processLoop();
 	void inspectAllConnections();
 
-	void OnRecieve(ConnectionService& connection);
-	void OnSend(ConnectionService& connection);
+	void OnRecieve(const std::string& ip, const uint16_t port);
+	void OnSend(const std::string& ip, const uint16_t port);
 
 protected:
 	std::vector<ConnectionService> m_socketService;

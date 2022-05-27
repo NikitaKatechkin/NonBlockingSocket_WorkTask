@@ -5,11 +5,6 @@
 #include <thread>
 #include <unordered_map>
 
-//TODO:
-//map using (unordered maybe)
-//socket should not have copy opersstion alowed
-
-
 class Server
 {
 protected:

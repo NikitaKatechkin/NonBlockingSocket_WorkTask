@@ -3,6 +3,7 @@
 
 namespace CustomSocket
 {
+    /**
     Socket& Socket::operator=(const Socket& other)
     {
         Socket copy(other);
@@ -12,6 +13,7 @@ namespace CustomSocket
 
         return *this;
     }
+    **/
 
     Socket& Socket::operator=(Socket&& other) noexcept
     {
@@ -30,12 +32,14 @@ namespace CustomSocket
             throw std::exception("Using unknown socket IP version.");
         }
     }
-
+    
+    /**
     Socket::Socket(const Socket& socket)
     {
         m_handle = socket.m_handle;
         m_IPVersion = socket.m_IPVersion;
     }
+    **/
 
     Socket::Socket(Socket&& socket) noexcept
     {
@@ -46,10 +50,10 @@ namespace CustomSocket
 
     Socket::~Socket()
     {
-        //if (m_handle != INVALID_SOCKET)
-        //{
-        //    Close();
-        //}
+        if (m_handle != INVALID_SOCKET)
+        {
+            Close();
+        }
     }
 
     Result Socket::Create()

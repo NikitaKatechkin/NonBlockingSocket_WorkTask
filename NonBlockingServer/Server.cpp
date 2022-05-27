@@ -444,7 +444,7 @@ CustomSocket::Result Server::connect()
 
 
 			newConnectionService.m_socketFD.fd = newConnectionService.m_socketInfo.first.GetHandle();
-			m_connections.insert({ newConnectionEndpoint, newConnectionService });
+			m_connections.insert({ newConnectionEndpoint, std::move(newConnectionService) });
 
 			SetEvent(m_getInfoEvent);
 

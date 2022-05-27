@@ -77,7 +77,7 @@ int main()
 				std::cout << "[SERVICE INFO]: ";
 				std::cout << "Socket was successfully switched to Blocking state." << std::endl;
 
-				CustomSocket::IPEndpoint IPToListen("127.0.0.1", 4792);
+				CustomSocket::IPEndpoint IPToListen("127.0.0.1", 4791);
 
 				if (client_socket.Bind(IPToListen) == CustomSocket::Result::Success)
 				{

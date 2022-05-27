@@ -16,10 +16,10 @@ int main()
 	server.waitForConnection();
 
 	char readBuffer[bufSize] = {};
-	server.recieve("127.0.0.1", 4792, readBuffer, bufSize);
+	server.recieve("127.0.0.1", 47921, readBuffer, bufSize);
 
 	const char writeBuffer[bufSize] = { "Hello world from server)))\0" };
-	server.send("127.0.0.1", 4792, writeBuffer, bufSize);
+	server.send("127.0.0.1", 4791, writeBuffer, bufSize);
 
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 

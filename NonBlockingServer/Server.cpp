@@ -148,7 +148,6 @@ Server::Server(const std::string& ip, const uint16_t port) :
 											  0 });
 }
 
-
 Server::~Server()
 {
 	CustomSocket::NetworkAPIInitializer::Shutdown();
@@ -211,6 +210,19 @@ CustomSocket::Result Server::stop()
 {
 	m_isRunning = false;
 	m_listenThread.join();
+
+
+	int index = 0;
+	for (auto& connection : m_connections)
+	{
+		if (index >= m_connections.size())
+		{
+			break;
+		}
+
+		index += 1;
+		disconnect(connection.first.GetIPString(), connection.first.GetPort());
+	}
 
 	auto result = m_listeningSocketService.m_socketInfo.first.Close();
 	if (result == CustomSocket::Result::Success)
@@ -364,10 +376,14 @@ CustomSocket::Result Server::disconnect(const std::string& ip, const uint16_t po
 		{
 			//std::lock_guard<std::mutex> print_lock(m_printLogMutex);
 
+			/**
 			std::cout << "[CLIENT]: " << "{IP = ";
 			std::cout << portToDisconnect->second.m_socketInfo.second.GetIPString();
 			std::cout << "} {PORT = " << portToDisconnect->second.m_socketInfo.second.GetPort() << "} ";
 			std::cout << "{STATUS = DISCONNECTED}" << std::endl;
+			**/
+			OnDisconnect(portToDisconnect->second.m_socketInfo.second.GetIPString(),
+						 portToDisconnect->second.m_socketInfo.second.GetPort());
 		}
 
 		m_connections.erase(portToDisconnect);
@@ -456,9 +472,12 @@ CustomSocket::Result Server::connect()
 
 			SetEvent(m_getInfoEvent);
 
+			/**
 			std::cout << "[CLIENT]: " << "{IP = " << newConnectionEndpoint.GetIPString();
 			std::cout << "} {PORT = " << newConnectionEndpoint.GetPort() << "} ";
 			std::cout << "{STATUS = CONNECTED}" << std::endl;
+			**/
+			OnConnect(newConnectionEndpoint.GetIPString(), newConnectionEndpoint.GetPort());
 
 			std::cout << "[SERVICE INFO]: " << "Pool size = ";
 			std::cout << m_connections.size() << "." << std::endl;
@@ -662,7 +681,7 @@ void Server::RecieveProcessing(const std::string& ip, const uint16_t port)
 					std::cout << "[CLIENT]: " << (connection.m_readBuffer) << std::endl;
 					**/
 
-					OnRecieve(ip, port, bytesRecieved);
+					OnRecieve(ip, port, connection.m_readBuffer, bytesRecieved);
 
 					connection.m_bytesToRecieve = 0;
 					connection.m_onRecieveFlag = false;
@@ -746,7 +765,7 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 					std::cout << static_cast<int>(connection.m_socketInfo.second.GetPort());
 					std::cout << "}" << std::endl;
 					**/
-					OnSend(ip, port, bytesSent);
+					OnSend(ip, port, connection.m_writeBuffer, bytesSent);
 
 					connection.m_bytesToSend = 0;
 					connection.m_onSendFlag = false;
@@ -756,33 +775,38 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 	}
 }
 
-void Server::OnSend(const std::string& ip, const uint16_t port, int& bytesSent)
+void Server::OnSend(const std::string& ip, const uint16_t port, const char* data, int& bytesSent)
 {
 	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
 
 	std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
-	std::cout << " bytes sent from port ";
+	std::cout << " bytes sent to port ";
 	std::cout << static_cast<int>(connection.m_socketInfo.second.GetPort());
-	std::cout << "}" << std::endl;
+	std::cout << "} { MESSAGE = \"" << data << "\" }" << std::endl;
 }
 
-void Server::OnRecieve(const std::string& ip, const uint16_t port, int& bytesRecieved)
+void Server::OnRecieve(const std::string& ip, const uint16_t port, char* data, int& bytesRecieved)
 {
 	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
 
-	std::cout << "[CLIENT]: " << "{ MESSAGE = \"" << (connection.m_readBuffer);
-	std::cout << "\" } ";
-	std::cout << "{ " << bytesRecieved << " bytes of data recieved}";
-	std::cout << std::endl;
+	std::cout << "[CLIENT]: ";
+	std::cout << "{ " << bytesRecieved << " bytes recieved from port ";
+	std::cout << static_cast<int>(connection.m_socketInfo.second.GetPort()) << "} ";
+	std::cout << "{ MESSAGE = \"" << data << "\" } " << std::endl;
 
 }
 
-void Server::OnConnect()
+void Server::OnConnect(const std::string& ip, const uint16_t port)
 {
-
+	std::cout << "[CLIENT]: " << "{IP = " << ip;
+	std::cout << "} {PORT = " << port << "} ";
+	std::cout << "{STATUS = CONNECTED}" << std::endl;
 }
 
-void Server::OnDisconnect()
+void Server::OnDisconnect(const std::string& ip, const uint16_t port)
 {
-
+	std::cout << "[CLIENT]: " << "{IP = ";
+	std::cout << ip;
+	std::cout << "} {PORT = " << port << "} ";
+	std::cout << "{STATUS = DISCONNECTED}" << std::endl;
 }

@@ -51,7 +51,6 @@ public:
 	Server(const std::string& ip, const uint16_t port);
 
 	~Server();
-	//~Server() = default;
 
 public:
 	CustomSocket::Result run();
@@ -73,17 +72,16 @@ protected:
 
 	virtual void RecieveProcessing(const std::string& ip, const uint16_t port);
 	virtual void SendProcessing(const std::string& ip, const uint16_t port);
-protected:
-	virtual void OnSend(const std::string& ip, const uint16_t port, int& bytesSent);
-	virtual void OnRecieve(const std::string& ip, const uint16_t port, int& bytesRecieved);
-	virtual void OnConnect();
-	virtual void OnDisconnect();
 
-	//TODO: OnAccept();
-	//TODO: OnClose();
 protected:
-	//std::vector<ConnectionService> m_socketService;
+	virtual void OnSend(const std::string& ip, const uint16_t port, 
+						const char* data, int& bytesSent);
+	virtual void OnRecieve(const std::string& ip, const uint16_t port, 
+						   char* data, int& bytesRecieved);
+	virtual void OnConnect(const std::string& ip, const uint16_t port);
+	virtual void OnDisconnect(const std::string& ip, const uint16_t port);
 
+protected:
 	ListeningService m_listeningSocketService;
 
 	std::unordered_map<CustomSocket::IPEndpoint, ConnectionService, IPEndpointHasher> m_connections;

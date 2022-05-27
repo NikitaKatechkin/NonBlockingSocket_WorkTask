@@ -8,10 +8,16 @@ namespace CustomSocket
 	class Socket
 	{
 	public:
+		Socket& operator=(const Socket& other);
+		Socket& operator=(Socket&& other) noexcept;
+
+	public:
 		Socket(SocketHandle handle = INVALID_SOCKET, 
 			   IPVersion IPVersion = IPVersion::IPv4);
+
 		Socket(const Socket& socket);
 		Socket(Socket&& socket) noexcept;
+
 		~Socket();
 
 		Result Create();

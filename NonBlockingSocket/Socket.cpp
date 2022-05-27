@@ -3,6 +3,25 @@
 
 namespace CustomSocket
 {
+    Socket& Socket::operator=(const Socket& other)
+    {
+        Socket copy(other);
+
+        std::swap(m_handle, copy.m_handle);
+        m_IPVersion = other.m_IPVersion;
+
+        return *this;
+    }
+
+    Socket& Socket::operator=(Socket&& other) noexcept
+    {
+        std::swap(m_handle, other.m_handle);
+        std::swap(m_IPVersion, other.m_IPVersion);
+        other.m_handle = INVALID_SOCKET;
+        
+        return *this;
+    }
+
     Socket::Socket(SocketHandle handle, IPVersion IPVersion):
         m_handle(handle), m_IPVersion(IPVersion)
     {

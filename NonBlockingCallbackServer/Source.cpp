@@ -1,16 +1,16 @@
 #include <NonBlockingSocket/IncludeMe.h>
-#include <NonBlockingServer/Server.h>
+#include <NonBlockingCallbackServer/CalbackServer.h>
 #include <iostream>
 #include <thread>
 
 int main()
 {
-	/**
+
 	const int bufSize = 256;
 
 	//Server server(CustomSocket::IPEndpoint("127.0.0.1", 4790));
-	Server server("127.0.0.1", 4790);
-	
+	CallbackServer server("127.0.0.1", 4790);
+
 	server.run();
 
 	server.waitForConnection();
@@ -26,6 +26,5 @@ int main()
 	server.stop();
 
 	system("pause");
-	**/
 	return 0;
 }

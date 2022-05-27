@@ -15,7 +15,7 @@ namespace CustomSocket
 		Socket(SocketHandle handle = INVALID_SOCKET, 
 			   IPVersion IPVersion = IPVersion::IPv4);
 
-		//Socket(const Socket& socket);
+		//Socket(const Socket& socket); //TODO delete
 		Socket(Socket&& socket) noexcept;
 
 		~Socket();

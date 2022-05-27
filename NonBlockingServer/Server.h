@@ -50,7 +50,8 @@ public:
 	Server(const CustomSocket::IPEndpoint& IPconfig);
 	Server(const std::string& ip, const uint16_t port);
 
-	~Server() = default;
+	~Server();
+	//~Server() = default;
 
 public:
 	CustomSocket::Result run();
@@ -62,6 +63,7 @@ public:
 							  const void* data, int numberOfBytes);
 
 	void waitForConnection();
+
 protected:
 	CustomSocket::Result disconnect(const std::string& ip, const uint16_t port);
 	CustomSocket::Result connect();
@@ -69,9 +71,16 @@ protected:
 	void processLoop();
 	void inspectAllConnections();
 
-	void OnRecieve(const std::string& ip, const uint16_t port);
-	void OnSend(const std::string& ip, const uint16_t port);
+	virtual void RecieveProcessing(const std::string& ip, const uint16_t port);
+	virtual void SendProcessing(const std::string& ip, const uint16_t port);
+protected:
+	virtual void OnSend(const std::string& ip, const uint16_t port, int& bytesSent);
+	virtual void OnRecieve(const std::string& ip, const uint16_t port, int& bytesRecieved);
+	virtual void OnConnect();
+	virtual void OnDisconnect();
 
+	//TODO: OnAccept();
+	//TODO: OnClose();
 protected:
 	//std::vector<ConnectionService> m_socketService;
 

@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-static const size_t LISTENING_FD_INDEX = 0;
+//static const size_t LISTENING_FD_INDEX = 0;
 
 /**
 Server::Server(const CustomSocket::IPEndpoint& IPconfig) :
@@ -148,6 +148,12 @@ Server::Server(const std::string& ip, const uint16_t port) :
 											  0 });
 }
 
+
+Server::~Server()
+{
+	CustomSocket::NetworkAPIInitializer::Shutdown();
+}
+
 /**
 CustomSocket::Result Server::run()
 {
@@ -211,6 +217,8 @@ CustomSocket::Result Server::stop()
 	{
 		std::cout << "[SERVICE INFO]: " << "Server successfully stopped." << std::endl;
 	}
+
+	//m_connections.clear();
 
 	return result;
 }
@@ -507,7 +515,7 @@ void Server::processLoop()
 
 void Server::processLoop()
 {
-	int numOfAccuredEvents = 0;
+	//int numOfAccuredEvents = 0;
 
 	while (m_isRunning == true)
 	{
@@ -572,13 +580,13 @@ void Server::inspectAllConnections()
 	{
 		if (item.second.m_socketFD.revents & POLLRDNORM)
 		{
-			OnRecieve(item.second.m_socketInfo.second.GetIPString(),
+			RecieveProcessing(item.second.m_socketInfo.second.GetIPString(),
 				item.second.m_socketInfo.second.GetPort());
 		}
 
 		if (item.second.m_socketFD.revents & POLLWRNORM)
 		{
-			OnSend(item.second.m_socketInfo.second.GetIPString(),
+			SendProcessing(item.second.m_socketInfo.second.GetIPString(),
 				item.second.m_socketInfo.second.GetPort());
 		}
 	}
@@ -623,7 +631,7 @@ void Server::OnRecieve(const std::string& ip, const uint16_t port)
 }
 **/
 
-void Server::OnRecieve(const std::string& ip, const uint16_t port)
+void Server::RecieveProcessing(const std::string& ip, const uint16_t port)
 {
 	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
 
@@ -649,7 +657,12 @@ void Server::OnRecieve(const std::string& ip, const uint16_t port)
 
 				if (connection.m_bytesToRecieve <= 0)
 				{
+					//Here to be REAL OnRecieve();
+					/**
 					std::cout << "[CLIENT]: " << (connection.m_readBuffer) << std::endl;
+					**/
+
+					OnRecieve(ip, port, bytesRecieved);
 
 					connection.m_bytesToRecieve = 0;
 					connection.m_onRecieveFlag = false;
@@ -701,7 +714,7 @@ void Server::OnSend(const std::string& ip, const uint16_t port)
 }
 **/
 
-void Server::OnSend(const std::string& ip, const uint16_t port)
+void Server::SendProcessing(const std::string& ip, const uint16_t port)
 {
 	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
 
@@ -725,10 +738,15 @@ void Server::OnSend(const std::string& ip, const uint16_t port)
 
 				if (connection.m_bytesToSend <= 0)
 				{
+					//Here to be REAL OnSent();
+
+					/**
 					std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
 					std::cout << " bytes sent from port ";
 					std::cout << static_cast<int>(connection.m_socketInfo.second.GetPort());
 					std::cout << "}" << std::endl;
+					**/
+					OnSend(ip, port, bytesSent);
 
 					connection.m_bytesToSend = 0;
 					connection.m_onSendFlag = false;
@@ -736,4 +754,35 @@ void Server::OnSend(const std::string& ip, const uint16_t port)
 			}
 		}
 	}
+}
+
+void Server::OnSend(const std::string& ip, const uint16_t port, int& bytesSent)
+{
+	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+
+	std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
+	std::cout << " bytes sent from port ";
+	std::cout << static_cast<int>(connection.m_socketInfo.second.GetPort());
+	std::cout << "}" << std::endl;
+}
+
+void Server::OnRecieve(const std::string& ip, const uint16_t port, int& bytesRecieved)
+{
+	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+
+	std::cout << "[CLIENT]: " << "{ MESSAGE = \"" << (connection.m_readBuffer);
+	std::cout << "\" } ";
+	std::cout << "{ " << bytesRecieved << " bytes of data recieved}";
+	std::cout << std::endl;
+
+}
+
+void Server::OnConnect()
+{
+
+}
+
+void Server::OnDisconnect()
+{
+
 }

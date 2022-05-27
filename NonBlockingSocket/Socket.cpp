@@ -19,7 +19,7 @@ namespace CustomSocket
     {
         std::swap(m_handle, other.m_handle);
         std::swap(m_IPVersion, other.m_IPVersion);
-        other.m_handle = INVALID_SOCKET;
+        //other.m_handle = INVALID_SOCKET;
         
         return *this;
     }
@@ -45,7 +45,7 @@ namespace CustomSocket
     {
         std::swap(m_handle, socket.m_handle);
         std::swap(m_IPVersion, socket.m_IPVersion);
-        socket.m_handle = INVALID_SOCKET;
+        //socket.m_handle = INVALID_SOCKET;
     }
 
     Socket::~Socket()

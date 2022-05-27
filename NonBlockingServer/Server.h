@@ -70,8 +70,8 @@ protected:
 	void processLoop();
 	void inspectAllConnections();
 
-	virtual void RecieveProcessing(const std::string& ip, const uint16_t port);
-	virtual void SendProcessing(const std::string& ip, const uint16_t port);
+	void RecieveProcessing(const std::string& ip, const uint16_t port);
+	void SendProcessing(const std::string& ip, const uint16_t port);
 
 protected:
 	virtual void OnSend(const std::string& ip, const uint16_t port, 

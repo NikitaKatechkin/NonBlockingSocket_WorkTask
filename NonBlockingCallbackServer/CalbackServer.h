@@ -9,6 +9,13 @@ public:
 	CallbackServer(const std::string& ip, const uint16_t port);
 
 protected:
-	virtual void RecieveProcessing(const std::string& ip, const uint16_t port) override;
-	virtual void SendProcessing(const std::string& ip, const uint16_t port) override;
+	//virtual void RecieveProcessing(const std::string& ip, const uint16_t port) override;
+	//virtual void SendProcessing(const std::string& ip, const uint16_t port) override;
+
+	virtual void OnSend(const std::string& ip, const uint16_t port,
+		const char* data, int& bytesSent) override;
+	virtual void OnRecieve(const std::string& ip, const uint16_t port,
+		char* data, int& bytesRecieved) override;
+	virtual void OnConnect(const std::string& ip, const uint16_t port) override;
+	virtual void OnDisconnect(const std::string& ip, const uint16_t port) override;
 };

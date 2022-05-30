@@ -4,6 +4,7 @@
 #include <vector>
 #include <thread>
 #include <unordered_map>
+#include <mutex>
 
 class Server
 {
@@ -53,33 +54,34 @@ public:
 	~Server();
 
 public:
-	CustomSocket::Result run();
-	CustomSocket::Result stop();
+	CustomSocket::Result Run(); //+
+	CustomSocket::Result Stop(); //+
 
-	CustomSocket::Result recieve(const std::string& ip, const uint16_t port, 
-								 void* data, int numberOfBytes);
-	CustomSocket::Result send(const std::string& ip, const uint16_t port, 
-							  const void* data, int numberOfBytes);
+	CustomSocket::Result Recieve(const std::string& ip, const uint16_t port, 
+								 void* data, int numberOfBytes); //+
+	CustomSocket::Result Send(const std::string& ip, const uint16_t port, 
+							  const void* data, int numberOfBytes); //+
 
-	void waitForConnection();
+	void WaitForConnection(); //+
+	std::vector<CustomSocket::IPEndpoint> GetConnectionList(); //+
 
 protected:
-	CustomSocket::Result disconnect(const std::string& ip, const uint16_t port);
-	CustomSocket::Result connect();
+	CustomSocket::Result Disconnect(const std::string& ip, const uint16_t port); //+
+	CustomSocket::Result Connect(); //+
 
-	void processLoop();
-	void inspectAllConnections();
+	void ProcessLoop(); //+
+	void InspectAllConnections();
 
 	void RecieveProcessing(const std::string& ip, const uint16_t port);
 	void SendProcessing(const std::string& ip, const uint16_t port);
 
 protected:
 	virtual void OnSend(const std::string& ip, const uint16_t port, 
-						const char* data, int& bytesSent);
+						const char* data, int& bytesSent); //+
 	virtual void OnRecieve(const std::string& ip, const uint16_t port, 
-						   char* data, int& bytesRecieved);
-	virtual void OnConnect(const std::string& ip, const uint16_t port);
-	virtual void OnDisconnect(const std::string& ip, const uint16_t port);
+						   char* data, int& bytesRecieved); //+
+	virtual void OnConnect(const std::string& ip, const uint16_t port); //+
+	virtual void OnDisconnect(const std::string& ip, const uint16_t port);  //+
 
 protected:
 	ListeningService m_listeningSocketService;
@@ -90,4 +92,7 @@ protected:
 	HANDLE m_getInfoEvent;
 
 	std::thread m_listenThread;
+
+	std::mutex m_printLogMutex;
+	std::mutex m_operationMutex;
 };

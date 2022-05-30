@@ -57,7 +57,7 @@ namespace CustomSocket
 				m_ipString = ip;
 				m_hostname = ip;
 
-				memcpy_s(m_ipBytes, IPv4_ADDRESS_SIZE,
+				memcpy_s(m_ipBytes.get(), IPv4_ADDRESS_SIZE,
 					&ipAddrBuf.S_un.S_addr, IPv4_ADDRESS_SIZE);
 
 				m_ipVersion = IPVersion::IPv4;
@@ -89,7 +89,7 @@ namespace CustomSocket
 				m_ipString.resize(16);
 				inet_ntop(AF_INET, &hostAddr->sin_addr, &m_ipString[0], 16);
 
-				memcpy_s(m_ipBytes, IPv4_ADDRESS_SIZE,
+				memcpy_s(m_ipBytes.get(), IPv4_ADDRESS_SIZE,
 					&hostAddr->sin_addr.S_un.S_addr, IPv4_ADDRESS_SIZE);
 			}
 		}
@@ -136,7 +136,7 @@ namespace CustomSocket
 		return m_ipString;
 	}
 
-	uint8_t* IPEndpoint::GetIPBytes()
+	std::shared_ptr<uint8_t[]> IPEndpoint::GetIPBytes()
 	{
 		return m_ipBytes;
 	}
@@ -156,7 +156,7 @@ namespace CustomSocket
 		sockaddr_in addr = {};
 
 		addr.sin_family = AF_INET;
-		memcpy_s(&addr.sin_addr, sizeof(ULONG), m_ipBytes, sizeof(ULONG));
+		memcpy_s(&addr.sin_addr, sizeof(ULONG), m_ipBytes.get(), sizeof(ULONG));
 		addr.sin_port = htons(m_port);
 
 		return addr;

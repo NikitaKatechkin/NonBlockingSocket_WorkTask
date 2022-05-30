@@ -11,19 +11,23 @@ int main()
 	//Server server(CustomSocket::IPEndpoint("127.0.0.1", 4790));
 	CallbackServer server("127.0.0.1", 4790);
 
-	server.run();
+	server.Run();
 
-	server.waitForConnection();
+	server.WaitForConnection();
+
+	CustomSocket::IPEndpoint client_connection = server.GetConnectionList()[0];
 
 	char readBuffer[bufSize] = {};
-	server.recieve("127.0.0.1", 4791, readBuffer, bufSize);
+	server.Recieve(client_connection.GetIPString(), static_cast<int>(client_connection.GetPort()), 
+				   readBuffer, bufSize);
 
 	const char writeBuffer[bufSize] = { "Hello world from server)))\0" };
-	server.send("127.0.0.1", 4791, writeBuffer, bufSize);
+	server.Send(client_connection.GetIPString(), static_cast<int>(client_connection.GetPort()), 
+				writeBuffer, bufSize);
 
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
-	server.stop();
+	server.Stop();
 
 	system("pause");
 	return 0;

@@ -75,31 +75,39 @@ Server::~Server()
 	CustomSocket::NetworkAPIInitializer::Shutdown();
 }
 
-CustomSocket::Result Server::run()
+CustomSocket::Result Server::Run()
 {
+	std::lock_guard<std::mutex> coutLock(m_operationMutex);
+
 	auto result = m_listeningSocketService.m_socketInfo.first.Listen(
 		m_listeningSocketService.m_socketInfo.second);
 
 	if (result == CustomSocket::Result::Success)
 	{
 		m_isRunning = true;
-		m_listenThread = std::thread(&Server::processLoop, this);
+		m_listenThread = std::thread(&Server::ProcessLoop, this);
+
+		std::lock_guard<std::mutex> coutLock(m_printLogMutex);
 
 		std::cout << "[SERVICE INFO]: " << "Server successfully started." << std::endl;
 	}
 	else
 	{
+		std::lock_guard<std::mutex> coutLock(m_printLogMutex);
+
 		std::cout << "[SERVICE INFO]: " << "Failed to start a server." << std::endl;
 	}
 
 	return result;
 }
 
-CustomSocket::Result Server::stop()
+CustomSocket::Result Server::Stop()
 {
-	m_isRunning = false;
-	m_listenThread.join();
 
+	{
+		m_isRunning = false;
+		m_listenThread.join();
+	}
 
 	int index = 0;
 	for (auto& connection : m_connections)
@@ -110,25 +118,27 @@ CustomSocket::Result Server::stop()
 		}
 
 		index += 1;
-		disconnect(connection.first.GetIPString(), connection.first.GetPort());
+		Disconnect(connection.first.GetIPString(), connection.first.GetPort());
 	}
 
 	auto result = m_listeningSocketService.m_socketInfo.first.Close();
 	if (result == CustomSocket::Result::Success)
 	{
+		std::lock_guard<std::mutex> coutLock(m_printLogMutex);
+
 		std::cout << "[SERVICE INFO]: " << "Server successfully stopped." << std::endl;
 	}
-
-	//m_connections.clear();
 
 	return result;
 }
 
-CustomSocket::Result Server::recieve(const std::string& ip, const uint16_t port,
+CustomSocket::Result Server::Recieve(const std::string& ip, const uint16_t port,
 	void* data, int numberOfBytes)
 {
 	std::string correct_ip = ip;
 	correct_ip.resize(16);
+
+	std::lock_guard<std::mutex> coutLock(m_operationMutex);
 
 	auto find_iter = m_connections.find(CustomSocket::IPEndpoint(correct_ip, port));
 
@@ -146,11 +156,13 @@ CustomSocket::Result Server::recieve(const std::string& ip, const uint16_t port,
 	return result;
 }
 
-CustomSocket::Result Server::send(const std::string& ip, const uint16_t port,
+CustomSocket::Result Server::Send(const std::string& ip, const uint16_t port,
 	const void* data, int numberOfBytes)
 {
 	std::string correct_ip = ip;
 	correct_ip.resize(16);
+
+	std::lock_guard<std::mutex> coutLock(m_operationMutex);
 
 	auto find_iter = m_connections.find(CustomSocket::IPEndpoint(correct_ip, port));
 
@@ -167,12 +179,27 @@ CustomSocket::Result Server::send(const std::string& ip, const uint16_t port,
 	return result;
 }
 
-void Server::waitForConnection()
+void Server::WaitForConnection()
 {
 	WaitForSingleObject(m_getInfoEvent, INFINITE);
 }
 
-CustomSocket::Result Server::disconnect(const std::string& ip, const uint16_t port)
+std::vector<CustomSocket::IPEndpoint> Server::GetConnectionList()
+{
+	auto key_selector = [](auto& pair) {return pair.first; };
+	std::vector<CustomSocket::IPEndpoint> result;
+
+	std::lock_guard<std::mutex> coutLock(m_operationMutex);
+
+	for (auto& item : m_connections)
+	{
+		result.push_back(key_selector(item));
+	}
+
+	return result;
+}
+
+CustomSocket::Result Server::Disconnect(const std::string& ip, const uint16_t port)
 {
 	auto portToDisconnect = m_connections.find(CustomSocket::IPEndpoint(ip, port));
 
@@ -181,18 +208,9 @@ CustomSocket::Result Server::disconnect(const std::string& ip, const uint16_t po
 
 	if (result == CustomSocket::Result::Success)
 	{
-		{
-			//std::lock_guard<std::mutex> print_lock(m_printLogMutex);
-
-			/**
-			std::cout << "[CLIENT]: " << "{IP = ";
-			std::cout << portToDisconnect->second.m_socketInfo.second.GetIPString();
-			std::cout << "} {PORT = " << portToDisconnect->second.m_socketInfo.second.GetPort() << "} ";
-			std::cout << "{STATUS = DISCONNECTED}" << std::endl;
-			**/
-			OnDisconnect(portToDisconnect->second.m_socketInfo.second.GetIPString(),
-						 portToDisconnect->second.m_socketInfo.second.GetPort());
-		}
+		OnDisconnect(portToDisconnect->second.m_socketInfo.second.GetIPString(),
+					 portToDisconnect->second.m_socketInfo.second.GetPort());
+		
 
 		m_connections.erase(portToDisconnect);
 	}
@@ -200,12 +218,8 @@ CustomSocket::Result Server::disconnect(const std::string& ip, const uint16_t po
 	return result;
 }
 
-CustomSocket::Result Server::connect()
+CustomSocket::Result Server::Connect()
 {
-	//TODO:
-	//MUST BE MOVE SEMANTICS
-	//AND
-	//REDUCE MULTIPLE BACK() CALLBACKS
 	CustomSocket::Socket newConnection;
 	CustomSocket::IPEndpoint newConnectionEndpoint;
 
@@ -214,8 +228,6 @@ CustomSocket::Result Server::connect()
 
 	if (result == CustomSocket::Result::Success)
 	{
-		//ACCEPTING-REGISTRATING ROUTINE STARTS
-
 		result = newConnection.SetSocketOption(CustomSocket::Option::IO_NonBlocking, TRUE);
 
 		if (result == CustomSocket::Result::Success)
@@ -233,22 +245,13 @@ CustomSocket::Result Server::connect()
 
 			SetEvent(m_getInfoEvent);
 
-			/**
-			std::cout << "[CLIENT]: " << "{IP = " << newConnectionEndpoint.GetIPString();
-			std::cout << "} {PORT = " << newConnectionEndpoint.GetPort() << "} ";
-			std::cout << "{STATUS = CONNECTED}" << std::endl;
-			**/
 			OnConnect(newConnectionEndpoint.GetIPString(), newConnectionEndpoint.GetPort());
-
-			std::cout << "[SERVICE INFO]: " << "Pool size = ";
-			std::cout << m_connections.size() << "." << std::endl;
 		}
-
-
-		//ACCEPTING-REGISTRATING ROUTINE ENDS
 	}
 	else
 	{
+		std::lock_guard<std::mutex> coutLock(m_printLogMutex);
+
 		std::cout << "[SERVICE INFO]: ";
 		std::cout << "Failed to accept new connection." << std::endl;
 	}
@@ -256,37 +259,39 @@ CustomSocket::Result Server::connect()
 	return result;
 }
 
-void Server::processLoop()
+void Server::ProcessLoop()
 {
-	//int numOfAccuredEvents = 0;
-
 	while (m_isRunning == true)
 	{
 		size_t numOfAccuredEvents = WSAPoll(&m_listeningSocketService.m_socketFD, 1, 1);
 
-
-		for (auto& item : m_connections)
 		{
-			numOfAccuredEvents += WSAPoll(&item.second.m_socketFD, 1, 1);
+			std::lock_guard<std::mutex> coutLock(m_operationMutex);
+
+			for (auto& item : m_connections)
+			{
+				numOfAccuredEvents += WSAPoll(&item.second.m_socketFD, 1, 1);
+			}
 		}
+		
 
 		if (numOfAccuredEvents > 0)
 		{
 			if (m_listeningSocketService.m_socketFD.revents & POLLRDNORM)
 			{
-				if (connect() != CustomSocket::Result::Success)
+				if (Connect() != CustomSocket::Result::Success)
 				{
 					break;
 				}
 
 				if (numOfAccuredEvents > 1)
 				{
-					inspectAllConnections();
+					InspectAllConnections();
 				}
 			}
 			else
 			{
-				inspectAllConnections();
+				InspectAllConnections();
 			}
 		}
 
@@ -297,7 +302,7 @@ void Server::processLoop()
 	}
 }
 
-void Server::inspectAllConnections()
+void Server::InspectAllConnections()
 {
 	for (auto& item : m_connections)
 	{
@@ -332,7 +337,7 @@ void Server::RecieveProcessing(const std::string& ip, const uint16_t port)
 			{
 				//CLIENT WAS DISCONNECTED
 
-				disconnect(connection.m_socketInfo.second.GetIPString(),
+				Disconnect(connection.m_socketInfo.second.GetIPString(),
 					connection.m_socketInfo.second.GetPort());
 			}
 			else
@@ -341,21 +346,12 @@ void Server::RecieveProcessing(const std::string& ip, const uint16_t port)
 
 				if (connection.m_bytesToRecieve <= 0)
 				{
-					//Here to be REAL OnRecieve();
-					/**
-					std::cout << "[CLIENT]: " << (connection.m_readBuffer) << std::endl;
-					**/
-
 					OnRecieve(ip, port, connection.m_readBuffer, bytesRecieved);
 
 					connection.m_bytesToRecieve = 0;
 					connection.m_onRecieveFlag = false;
 				}
 			}
-
-
-			//TODO: remove
-			connection.m_onSendFlag = true;
 		}
 	}
 }
@@ -375,7 +371,7 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 			{
 				//CLIENT WAS DISCONNECTED
 
-				disconnect(connection.m_socketInfo.second.GetIPString(),
+				Disconnect(connection.m_socketInfo.second.GetIPString(),
 					connection.m_socketInfo.second.GetPort());
 			}
 			else
@@ -384,14 +380,6 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 
 				if (connection.m_bytesToSend <= 0)
 				{
-					//Here to be REAL OnSent();
-
-					/**
-					std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
-					std::cout << " bytes sent from port ";
-					std::cout << static_cast<int>(connection.m_socketInfo.second.GetPort());
-					std::cout << "}" << std::endl;
-					**/
 					OnSend(ip, port, connection.m_writeBuffer, bytesSent);
 
 					connection.m_bytesToSend = 0;
@@ -404,34 +392,45 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 
 void Server::OnSend(const std::string& ip, const uint16_t port, const char* data, int& bytesSent)
 {
-	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+	//auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+
+	std::lock_guard<std::mutex> coutLock(m_printLogMutex);
 
 	std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
 	std::cout << " bytes sent to port ";
-	std::cout << static_cast<int>(connection.m_socketInfo.second.GetPort());
+	std::cout << static_cast<int>(port);
 	std::cout << "} { MESSAGE = \"" << data << "\" }" << std::endl;
 }
 
 void Server::OnRecieve(const std::string& ip, const uint16_t port, char* data, int& bytesRecieved)
 {
-	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+	//auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+
+	std::lock_guard<std::mutex> coutLock(m_printLogMutex);
 
 	std::cout << "[CLIENT]: ";
 	std::cout << "{ " << bytesRecieved << " bytes recieved from port ";
-	std::cout << static_cast<int>(connection.m_socketInfo.second.GetPort()) << "} ";
+	std::cout << static_cast<int>(port) << "} ";
 	std::cout << "{ MESSAGE = \"" << data << "\" } " << std::endl;
 
 }
 
 void Server::OnConnect(const std::string& ip, const uint16_t port)
 {
+	std::lock_guard<std::mutex> coutLock(m_printLogMutex);
+
 	std::cout << "[CLIENT]: " << "{IP = " << ip;
 	std::cout << "} {PORT = " << port << "} ";
 	std::cout << "{STATUS = CONNECTED}" << std::endl;
+
+	std::cout << "[SERVICE INFO]: " << "Pool size = ";
+	std::cout << m_connections.size() << "." << std::endl;
 }
 
 void Server::OnDisconnect(const std::string& ip, const uint16_t port)
 {
+	std::lock_guard<std::mutex> coutLock(m_printLogMutex);
+
 	std::cout << "[CLIENT]: " << "{IP = ";
 	std::cout << ip;
 	std::cout << "} {PORT = " << port << "} ";

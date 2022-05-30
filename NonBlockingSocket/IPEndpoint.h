@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <WS2tcpip.h>
+#include <memory>
 
 namespace CustomSocket
 {
@@ -19,7 +20,7 @@ namespace CustomSocket
 		IPVersion GetIPVersion();
 		std::string GetHostname();
 		std::string GetIPString() const;
-		uint8_t* GetIPBytes();
+		std::shared_ptr<uint8_t[]> GetIPBytes();
 		uint16_t GetPort() const;
 
 		sockaddr_in GetSockaddrIPv4();
@@ -32,7 +33,9 @@ namespace CustomSocket
 
 		IPVersion m_ipVersion = IPVersion::Unknown;
 		std::string m_ipString;
-		uint8_t* m_ipBytes = nullptr;
+
+		//uint8_t* m_ipBytes = nullptr;
+		std::shared_ptr<uint8_t[]> m_ipBytes;
 
 		uint16_t m_port = 0;
 	};

@@ -5,10 +5,9 @@
 
 int main()
 {
-
+	/**
 	const int bufSize = 256;
 
-	//Server server(CustomSocket::IPEndpoint("127.0.0.1", 4790));
 	CallbackServer server("127.0.0.1", 4790);
 
 	server.Run();
@@ -30,5 +29,7 @@ int main()
 	server.Stop();
 
 	system("pause");
+	**/
+
 	return 0;
 }

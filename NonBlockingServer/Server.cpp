@@ -241,6 +241,9 @@ CustomSocket::Result Server::Connect()
 
 
 			newConnectionService.m_socketFD.fd = newConnectionService.m_socketInfo.first.GetHandle();
+
+			std::lock_guard<std::mutex> coutLock(m_operationMutex);
+
 			m_connections.insert({ newConnectionEndpoint, std::move(newConnectionService) });
 
 			SetEvent(m_getInfoEvent);

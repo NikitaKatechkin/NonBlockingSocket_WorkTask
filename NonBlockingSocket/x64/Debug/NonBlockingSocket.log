@@ -1,5 +1,4 @@
 ﻿  IPEndpoint.cpp
   NetworkInitializer.cpp
   Socket.cpp
-  Создание кода...
   NonBlockingSocket.vcxproj -> C:\Users\nikita.katechkin\source\repos\NonBlockingSocket\x64\Debug\NonBlockingSocket.lib

@@ -1,5 +1,4 @@
 ﻿  IPEndpoint.cpp
   NetworkInitializer.cpp
   Socket.cpp
-E:\root_folder\repos\NonBlockingSocket_WorkTask\NonBlockingSocket\IPEndpoint.cpp(208,14): warning C4553: '==': result of expression not used; did you intend '='?
   NonBlockingSocket.vcxproj -> E:\root_folder\repos\NonBlockingSocket_WorkTask\x64\Debug\NonBlockingSocket.lib

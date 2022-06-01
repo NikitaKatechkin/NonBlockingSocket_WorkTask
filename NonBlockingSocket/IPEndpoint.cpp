@@ -57,7 +57,7 @@ namespace CustomSocket
 				m_ipString = ip;
 				m_hostname = ip;
 
-				memcpy_s(m_ipBytes.get(), IPv4_ADDRESS_SIZE,
+				memcpy_s(m_ipBytes, IPv4_ADDRESS_SIZE,
 					&ipAddrBuf.S_un.S_addr, IPv4_ADDRESS_SIZE);
 
 				m_ipVersion = IPVersion::IPv4;
@@ -89,7 +89,7 @@ namespace CustomSocket
 				m_ipString.resize(16);
 				inet_ntop(AF_INET, &hostAddr->sin_addr, &m_ipString[0], 16);
 
-				memcpy_s(m_ipBytes.get(), IPv4_ADDRESS_SIZE,
+				memcpy_s(m_ipBytes, IPv4_ADDRESS_SIZE,
 					&hostAddr->sin_addr.S_un.S_addr, IPv4_ADDRESS_SIZE);
 			}
 		}
@@ -121,6 +121,30 @@ namespace CustomSocket
 		m_hostname = m_ipString;
 	}
 
+	IPEndpoint::IPEndpoint(const IPEndpoint& copy)
+	{
+		m_hostname = copy.m_hostname;
+		m_ipVersion = copy.m_ipVersion;
+		m_ipString = copy.m_ipString;
+		m_port = copy.m_port;
+
+		if (copy.m_ipBytes != nullptr)
+		{
+			m_ipBytes = new uint8_t[IPv4_ADDRESS_SIZE];
+			memcpy_s(m_ipBytes, IPv4_ADDRESS_SIZE * sizeof(uint8_t),
+				copy.m_ipBytes, IPv4_ADDRESS_SIZE * sizeof(uint8_t));
+		}
+	}
+
+	IPEndpoint::~IPEndpoint()
+	{
+		if (m_ipBytes != nullptr)
+		{
+			delete[] m_ipBytes;
+			m_ipBytes = nullptr;
+		}
+	}
+
 	IPVersion CustomSocket::IPEndpoint::GetIPVersion() const
 	{
 		return m_ipVersion;
@@ -136,7 +160,7 @@ namespace CustomSocket
 		return m_ipString;
 	}
 
-	std::shared_ptr<uint8_t[]> IPEndpoint::GetIPBytes() const
+	uint8_t* IPEndpoint::GetIPBytes() const
 	{
 		return m_ipBytes;
 	}
@@ -156,10 +180,27 @@ namespace CustomSocket
 		sockaddr_in addr = {};
 
 		addr.sin_family = AF_INET;
-		memcpy_s(&addr.sin_addr, sizeof(ULONG), m_ipBytes.get(), sizeof(ULONG));
+		memcpy_s(&addr.sin_addr, sizeof(ULONG), m_ipBytes, sizeof(ULONG));
 		addr.sin_port = htons(m_port);
 
 		return addr;
+	}
+
+	IPEndpoint& IPEndpoint::operator=(const IPEndpoint& copy)
+	{
+		m_hostname = copy.m_hostname;
+		m_ipVersion = copy.m_ipVersion;
+		m_ipString = copy.m_ipString;
+		m_port = copy.m_port;
+
+		if (copy.m_ipBytes != nullptr)
+		{
+			m_ipBytes = new uint8_t[IPv4_ADDRESS_SIZE];
+			memcpy_s(m_ipBytes, IPv4_ADDRESS_SIZE * sizeof(uint8_t),
+				copy.m_ipBytes, IPv4_ADDRESS_SIZE * sizeof(uint8_t));
+		}
+
+		return *this;
 	}
 
 	std::ostream& operator<<(std::ostream& outputStream, const IPEndpoint& obj)
@@ -205,7 +246,7 @@ namespace CustomSocket
 				{
 					if (c1.m_ipBytes[index] != c2.m_ipBytes[index])
 					{
-						result == false;
+						result = false;
 						break;
 					}
 				}

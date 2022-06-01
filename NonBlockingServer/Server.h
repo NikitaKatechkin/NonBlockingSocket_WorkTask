@@ -48,8 +48,8 @@ protected:
 	};
 
 public:
-	Server(const CustomSocket::IPEndpoint& IPconfig);
-	Server(const std::string& ip, const uint16_t port);
+	Server(const CustomSocket::IPEndpoint& IPconfig = CustomSocket::IPEndpoint("127.0.0.1", 0));
+	Server(const std::string& ip = "127.0.0.1", const uint16_t port = 0);
 
 	~Server();
 

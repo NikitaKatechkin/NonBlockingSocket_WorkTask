@@ -121,12 +121,12 @@ namespace CustomSocket
 		m_hostname = m_ipString;
 	}
 
-	IPVersion CustomSocket::IPEndpoint::GetIPVersion()
+	IPVersion CustomSocket::IPEndpoint::GetIPVersion() const
 	{
 		return m_ipVersion;
 	}
 
-	std::string IPEndpoint::GetHostname()
+	std::string IPEndpoint::GetHostname() const 
 	{
 		return m_hostname;
 	}
@@ -136,7 +136,7 @@ namespace CustomSocket
 		return m_ipString;
 	}
 
-	std::shared_ptr<uint8_t[]> IPEndpoint::GetIPBytes()
+	std::shared_ptr<uint8_t[]> IPEndpoint::GetIPBytes() const
 	{
 		return m_ipBytes;
 	}
@@ -146,7 +146,7 @@ namespace CustomSocket
 		return m_port;
 	}
 
-	sockaddr_in IPEndpoint::GetSockaddrIPv4()
+	sockaddr_in IPEndpoint::GetSockaddrIPv4() const
 	{
 		if (m_ipVersion != IPVersion::IPv4)
 		{
@@ -190,9 +190,34 @@ namespace CustomSocket
 
 		return outputStream;
 	}
+
 	bool operator==(const IPEndpoint& c1, const IPEndpoint& c2)
 	{
-		return ((c1.m_ipString == c2.m_ipString) && 
-				(c1.m_port == c2.m_port));
+		bool result = (c1.m_ipVersion == c2.m_ipVersion);
+
+		if (result == true)
+		{
+			switch (c1.m_ipVersion)
+			{
+			case IPVersion::IPv4:
+			{
+				for (size_t index = 0; index < 4; index++)
+				{
+					if (c1.m_ipBytes[index] != c2.m_ipBytes[index])
+					{
+						result == false;
+						break;
+					}
+				}
+				break;
+			}
+			default:
+				break;
+			}
+		}
+
+		result = (result == true) ? (c1.m_port == c2.m_port) : false;
+
+		return result;
 	}
 }

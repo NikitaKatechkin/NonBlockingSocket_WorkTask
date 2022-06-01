@@ -25,10 +25,10 @@ TEST(NonBlockingCallbackServer, PositiveRunTest)
 TEST(NonBlockingCallbackServer, NegativeRunTest)
 {
 	CallbackServer server("127.0.0.1", 4790);
-	CallbackServer failing_server("127.0.0.1", 4790);
+	EXPECT_ANY_THROW(CallbackServer("127.0.0.1", 4790));
 
 	server.Run();
-	EXPECT_EQ(failing_server.Run(), CustomSocket::Result::Fail);
+	//EXPECT_EQ(failing_server.Run(), CustomSocket::Result::Fail);
 
 	server.Stop();
 }
@@ -69,14 +69,14 @@ TEST(NonBlockingCallbackServer, PositiveNonEmptyConnectionListTest)
 
 	CustomSocket::Socket client;
 
-	std::string clientIP = "127.0.0.1";
-	clientIP.resize(16);
-	const uint16_t port = 55687;
+	//std::string clientIP = "127.0.0.1";
+	//clientIP.resize(16);
+	//const uint16_t port = 55687;
 
-	const CustomSocket::IPEndpoint clientConfig(clientIP, port);
+	const CustomSocket::IPEndpoint clientConfig("127.0.0.1", 55687);
 
 	EXPECT_EQ(client.Create(), CustomSocket::Result::Success);
-	EXPECT_EQ(client.Bind(clientConfig), CustomSocket::Result::Success);
+	EXPECT_EQ(client.Bind(&clientConfig), CustomSocket::Result::Success);
 	
 	client.Connect(CustomSocket::IPEndpoint("127.0.0.1", 4790));
 
@@ -103,12 +103,12 @@ TEST(NonBlockingCallbackServer, PositiveRecieveTest)
 	CustomSocket::Socket client;
 
 	client.Create();
-	client.Bind(clientConfig);
+	client.Bind(&clientConfig);
 
 	client.Connect(serverConfig);
 	server.WaitForConnection();
 
-	//while (server.GetConnectionList().size() != 1) {}
+	while (server.GetConnectionList().size() != 1) {}
 
 	EXPECT_EQ(server.Recieve("127.0.0.1", 55699, nullptr, 0), CustomSocket::Result::Success);
 
@@ -138,7 +138,7 @@ TEST(NonBlockingCallbackServer, PositiveSendTest)
 	CustomSocket::Socket client;
 
 	client.Create();
-	client.Bind(clientConfig);
+	client.Bind(&clientConfig);
 
 	client.Connect(serverConfig);
 	server.WaitForConnection();
@@ -162,14 +162,53 @@ TEST(NonBlockingCallbackServer, NegativeSendTest)
 	server.Stop();
 }
 
+//---------------------------------------------------------
+
+TEST(NonBlockingSocket, PositiveBindAndListenCompitabilityTest)
+{
+	EXPECT_TRUE(CustomSocket::NetworkAPIInitializer::Initialize());
+
+	CustomSocket::Socket socket;
+	
+	EXPECT_EQ(socket.Create(), CustomSocket::Result::Success);
+	EXPECT_EQ(socket.Bind(&CustomSocket::IPEndpoint("127.0.0.1", 4790)),
+			  CustomSocket::Result::Success);
+	EXPECT_EQ(socket.Listen(), CustomSocket::Result::Success);
+	EXPECT_EQ(socket.Close(), CustomSocket::Result::Success);
+
+	EXPECT_EQ(socket.Create(), CustomSocket::Result::Success);
+	EXPECT_EQ(socket.Bind(), CustomSocket::Result::Success);
+
+	CustomSocket::IPEndpoint config;
+	EXPECT_EQ(socket.GetSocketInfo(&config), 
+			  CustomSocket::Result::Success);
+
+	std::cout << config << std::endl;
+
+	EXPECT_EQ(socket.Listen(), CustomSocket::Result::Success);
+	EXPECT_EQ(socket.Close(), CustomSocket::Result::Success);
+
+	EXPECT_EQ(socket.Create(), CustomSocket::Result::Success);
+	EXPECT_EQ(socket.Bind(&CustomSocket::IPEndpoint("127.0.0.1", 4790)),
+		CustomSocket::Result::Success);
+	EXPECT_EQ(socket.Listen(&CustomSocket::IPEndpoint("127.0.0.1", 4790)), 
+							CustomSocket::Result::Success);
+	EXPECT_EQ(socket.Close(), CustomSocket::Result::Success);
+
+	EXPECT_EQ(socket.Create(), CustomSocket::Result::Success);
+	EXPECT_EQ(socket.Bind(), CustomSocket::Result::Success);
+
+	CustomSocket::NetworkAPIInitializer::Shutdown();
+}
+
 int main(int argc, char* argv[])
 {
-	///**
+	/**
 	::testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
-	//**/
+	**/
 
-	/**
+	///**
 	const int bufSize = 256;
 
 	CallbackServer server("127.0.0.1", 4790);
@@ -194,6 +233,5 @@ int main(int argc, char* argv[])
 
 	system("pause");
 	return 0;
-	**/
-
+	//**/
 }

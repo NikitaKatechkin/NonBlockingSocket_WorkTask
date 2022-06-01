@@ -18,8 +18,6 @@ Server::Server(const CustomSocket::IPEndpoint& IPconfig) :
 		throw std::exception();
 	}
 
-	m_listeningSocketService.m_socketInfo.second = IPconfig;
-
 	if (m_listeningSocketService.m_socketInfo.first.Create() != CustomSocket::Result::Success)
 	{
 		throw std::exception();
@@ -35,6 +33,18 @@ Server::Server(const CustomSocket::IPEndpoint& IPconfig) :
 											  m_listeningSocketService.m_socketInfo.first.GetHandle(),
 											  (POLLRDNORM),
 											  0 });
+
+
+	if (m_listeningSocketService.m_socketInfo.first.Bind(&IPconfig) != CustomSocket::Result::Success)
+	{
+		throw std::exception();
+	}
+
+	if (m_listeningSocketService.m_socketInfo.first.GetSocketInfo(
+		&m_listeningSocketService.m_socketInfo.second) != CustomSocket::Result::Success)
+	{
+		throw std::exception();
+	}
 }
 
 Server::Server(const std::string& ip, const uint16_t port) :
@@ -51,7 +61,7 @@ Server::Server(const std::string& ip, const uint16_t port) :
 		throw std::exception();
 	}
 
-	m_listeningSocketService.m_socketInfo.second = CustomSocket::IPEndpoint(ip, port);
+	//m_listeningSocketService.m_socketInfo.second = CustomSocket::IPEndpoint(ip, port);
 
 	if (m_listeningSocketService.m_socketInfo.first.Create() != CustomSocket::Result::Success)
 	{
@@ -68,6 +78,19 @@ Server::Server(const std::string& ip, const uint16_t port) :
 											  m_listeningSocketService.m_socketInfo.first.GetHandle(),
 											  (POLLRDNORM),
 											  0 });
+
+	CustomSocket::IPEndpoint config(ip, port);
+	if (m_listeningSocketService.m_socketInfo.first.Bind(&config) 
+		!= CustomSocket::Result::Success)
+	{
+		throw std::exception();
+	}
+
+	if (m_listeningSocketService.m_socketInfo.first.GetSocketInfo(
+		&m_listeningSocketService.m_socketInfo.second) != CustomSocket::Result::Success)
+	{
+		throw std::exception();
+	}
 }
 
 Server::~Server()
@@ -79,8 +102,9 @@ CustomSocket::Result Server::Run()
 {
 	std::lock_guard<std::mutex> coutLock(m_operationMutex);
 
-	auto result = m_listeningSocketService.m_socketInfo.first.Listen(
-		m_listeningSocketService.m_socketInfo.second);
+	//auto result = m_listeningSocketService.m_socketInfo.first.Listen(
+	//	&m_listeningSocketService.m_socketInfo.second);
+	auto result = m_listeningSocketService.m_socketInfo.first.Listen();
 
 	if (result == CustomSocket::Result::Success)
 	{

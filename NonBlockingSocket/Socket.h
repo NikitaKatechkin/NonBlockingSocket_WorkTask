@@ -23,11 +23,13 @@ namespace CustomSocket
 		Result Create();
 		Result Close();
 
-		Result Bind(IPEndpoint endpooint);
-		Result Listen(IPEndpoint endpoint, int backlog = 5);
+		Result Bind(const IPEndpoint* endpooint = nullptr);
+		Result Listen(const IPEndpoint* endpoint = nullptr, int backlog = 5);
 
 		Result Accept(Socket& outSocket, IPEndpoint* outEndpoint = nullptr);
-		Result Connect(IPEndpoint endpoint);
+		Result Connect(const IPEndpoint& endpoint);
+
+		Result GetSocketInfo(IPEndpoint* buffer = nullptr);
 
 		Result Send(const void* data, int numberOfBytes, int& bytesSent);
 		Result Recieve(void* destination, int numberOfBytes, int& bytesRecieved);

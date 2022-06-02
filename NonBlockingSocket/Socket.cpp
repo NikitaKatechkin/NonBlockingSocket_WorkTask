@@ -116,6 +116,7 @@ namespace CustomSocket
         return result;
     }
 
+    /**
     Result Socket::Bind(const IPEndpoint* endpoint)
     {
         sockaddr_in addr = {};
@@ -144,25 +145,48 @@ namespace CustomSocket
 
         return result;
     }
+    **/
 
-    Result Socket::Listen(const IPEndpoint* endpoint, int backlog)
+    Result Socket::Bind(const IPEndpoint& endpoint)
+    {
+        sockaddr_in addr = {};
+        addr = endpoint.GetSockaddrIPv4();
+
+        Result result = bind(m_handle, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in)) == 0 ?
+            Result::Success : Result::Fail;
+
+        if ((result == Result::Fail))
+        {
+            //WSAGetLastError();
+
+            std::cerr << "[Socket::Bind()] " << "ERROR: ";
+            std::cerr << "Failed to bind a socket to port " << static_cast<int>(endpoint.GetPort()) << " with GLE = ";
+            std::cerr << WSAGetLastError() << std::endl;
+        }
+
+        return result;
+    }
+
+    Result Socket::Listen(const IPEndpoint& endpoint, int backlog)
     {
         IPEndpoint currentAddress;
-        Result result = GetSocketInfo(&currentAddress);
+        Result result = GetSocketInfo(currentAddress);
 
         if ((result == CustomSocket::Result::Fail) && (WSAGetLastError() == WSAEINVAL))
         {
             //SOCKET WAS NOT BIND
 
-            result = (endpoint != nullptr) ? Bind(endpoint) : CustomSocket::Result::Fail;
+            result = Bind(endpoint);
         }
-        else if ((result == CustomSocket::Result::Success) && (endpoint != nullptr))
+        else if ((result == CustomSocket::Result::Success))
         {
             //ADDRESS TO BIND WAS PROVIDED BUT SOCKET WAS ALREADY BIND
             //SUCCESS ONLY IN CASE THAT PRIVDED ADDRESS EQUAL TO PREVIOUSLY BOUND ADDRESS 
-            
-            result = (*endpoint == currentAddress) ? CustomSocket::Result::Success : 
-                                                     CustomSocket::Result::Fail;
+            if (!(endpoint == IPEndpoint("127.0.0.1", 0)))
+            {
+                result = (endpoint == currentAddress) ? CustomSocket::Result::Success :
+                    CustomSocket::Result::Fail;
+            }
         }
 
 
@@ -171,12 +195,10 @@ namespace CustomSocket
             if (listen(m_handle, backlog) != 0)
             {
                 //WSAGetLastError();
-                if (endpoint != nullptr)
-                {
+                
                     std::cerr << "[Socket::Listen()] " << "ERROR: ";
-                    std::cerr << "Failed to listen a socket on port " << static_cast<int>(endpoint->GetPort());
+                    std::cerr << "Failed to listen a socket on port " << static_cast<int>(endpoint.GetPort());
                     std::cerr << " with GLE = " << WSAGetLastError() << std::endl;
-                }
 
                 result = Result::Fail;
             }
@@ -243,7 +265,7 @@ namespace CustomSocket
         return result;
     }
 
-    Result Socket::GetSocketInfo(IPEndpoint* buffer)
+    Result Socket::GetSocketInfo(IPEndpoint& buffer)
     {
         sockaddr socketAddress = {};
         int addressSize = sizeof(sockaddr);
@@ -252,9 +274,9 @@ namespace CustomSocket
                                                                             CustomSocket::Result::Success: 
                                                                             CustomSocket::Result::Fail;
 
-        if ((result != CustomSocket::Result::Fail) && (buffer != nullptr))
+        if ((result == CustomSocket::Result::Success))
         {
-            *buffer = IPEndpoint(&socketAddress);
+            buffer = IPEndpoint(&socketAddress);
         }
 
         return result;

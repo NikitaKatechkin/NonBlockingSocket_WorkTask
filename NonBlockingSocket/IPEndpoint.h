@@ -7,6 +7,8 @@
 #include <WS2tcpip.h>
 #include <memory>
 
+//TODO: define move construct
+
 namespace CustomSocket
 {
 	class IPEndpoint

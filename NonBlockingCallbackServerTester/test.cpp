@@ -62,12 +62,12 @@ TEST(NonBlockingCallbackServer, PositiveNonEmptyConnectionListTest)
 	//const CustomSocket::IPEndpoint clientConfig("127.0.0.1", 55687);
 
 	EXPECT_EQ(client.Create(), CustomSocket::Result::Success);
-	EXPECT_EQ(client.Bind(&clientConfig), CustomSocket::Result::Success);
+	EXPECT_EQ(client.Bind(clientConfig), CustomSocket::Result::Success);
 	
 	client.Connect(server.GetServerIPConfig());
 
 	CustomSocket::IPEndpoint clientIPInfo;
-	EXPECT_EQ(client.GetSocketInfo(&clientIPInfo), 
+	EXPECT_EQ(client.GetSocketInfo(clientIPInfo), 
 			  CustomSocket::Result::Success);
 
 	std::vector<CustomSocket::IPEndpoint> list;
@@ -93,13 +93,13 @@ TEST(NonBlockingCallbackServer, PositiveRecieveTest)
 	CustomSocket::Socket client;
 
 	client.Create();
-	client.Bind(&clientConfig);
+	client.Bind(clientConfig);
 
 	client.Connect(server.GetServerIPConfig());
 	server.WaitForConnection();
 
 	CustomSocket::IPEndpoint clientIPInfo;
-	EXPECT_EQ(client.GetSocketInfo(&clientIPInfo),
+	EXPECT_EQ(client.GetSocketInfo(clientIPInfo),
 		CustomSocket::Result::Success);
 
 	EXPECT_EQ(server.Recieve(clientIPInfo.GetIPString(),
@@ -134,13 +134,13 @@ TEST(NonBlockingCallbackServer, PositiveSendTest)
 	CustomSocket::Socket client;
 
 	client.Create();
-	client.Bind(&clientConfig);
+	client.Bind(clientConfig);
 
 	client.Connect(server.GetServerIPConfig());
 	server.WaitForConnection();
 
 	CustomSocket::IPEndpoint clientIPInfo;
-	EXPECT_EQ(client.GetSocketInfo(&clientIPInfo),
+	EXPECT_EQ(client.GetSocketInfo(clientIPInfo),
 			  CustomSocket::Result::Success);
 
 	EXPECT_EQ(server.Send(clientIPInfo.GetIPString(),
@@ -173,7 +173,7 @@ TEST(NonBlockingSocket, PositiveBindAndListenCompitabilityTest)
 	CustomSocket::Socket socket;
 	
 	EXPECT_EQ(socket.Create(), CustomSocket::Result::Success);
-	EXPECT_EQ(socket.Bind(&CustomSocket::IPEndpoint("127.0.0.1", 4790)),
+	EXPECT_EQ(socket.Bind(CustomSocket::IPEndpoint("127.0.0.1", 4790)),
 			  CustomSocket::Result::Success);
 	EXPECT_EQ(socket.Listen(), CustomSocket::Result::Success);
 	EXPECT_EQ(socket.Close(), CustomSocket::Result::Success);
@@ -182,7 +182,7 @@ TEST(NonBlockingSocket, PositiveBindAndListenCompitabilityTest)
 	EXPECT_EQ(socket.Bind(), CustomSocket::Result::Success);
 
 	CustomSocket::IPEndpoint config;
-	EXPECT_EQ(socket.GetSocketInfo(&config), 
+	EXPECT_EQ(socket.GetSocketInfo(config), 
 			  CustomSocket::Result::Success);
 
 	std::cout << config << std::endl;
@@ -191,9 +191,9 @@ TEST(NonBlockingSocket, PositiveBindAndListenCompitabilityTest)
 	EXPECT_EQ(socket.Close(), CustomSocket::Result::Success);
 
 	EXPECT_EQ(socket.Create(), CustomSocket::Result::Success);
-	EXPECT_EQ(socket.Bind(&CustomSocket::IPEndpoint("127.0.0.1", 4790)),
+	EXPECT_EQ(socket.Bind(CustomSocket::IPEndpoint("127.0.0.1", 4790)),
 		CustomSocket::Result::Success);
-	EXPECT_EQ(socket.Listen(&CustomSocket::IPEndpoint("127.0.0.1", 4790)), 
+	EXPECT_EQ(socket.Listen(CustomSocket::IPEndpoint("127.0.0.1", 4790)), 
 							CustomSocket::Result::Success);
 	EXPECT_EQ(socket.Close(), CustomSocket::Result::Success);
 

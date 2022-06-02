@@ -10,7 +10,6 @@ class Server
 {
 protected:
 	using CONNECTION_INFO = std::pair<CustomSocket::Socket, CustomSocket::IPEndpoint>;
-	using CONNECTIONS = std::vector<CONNECTION_INFO>;
 
 	struct ConnectionService
 	{
@@ -57,6 +56,10 @@ protected:
 		WSAPOLLFD m_socketFD;
 	};
 
+protected:
+	using CONNECTIONS = std::unordered_map<CustomSocket::IPEndpoint, ConnectionService, IPEndpointHasher>;
+	using CONNECTIONS_LIST = std::vector<CustomSocket::IPEndpoint>;
+
 public:
 	Server(const CustomSocket::IPEndpoint& IPconfig = CustomSocket::IPEndpoint("127.0.0.1", 0));
 	Server(const std::string& ip = "127.0.0.1", const uint16_t port = 0);
@@ -74,7 +77,7 @@ public:
 
 	void WaitForConnection(); //+
 
-	std::vector<CustomSocket::IPEndpoint> GetConnectionList(); //+
+	CONNECTIONS_LIST GetConnectionList(); //+
 	CustomSocket::IPEndpoint GetServerIPConfig();
 
 protected:
@@ -98,8 +101,8 @@ protected:
 protected:
 	ListeningService m_listeningSocketService;
 
-	std::unordered_map<CustomSocket::IPEndpoint, ConnectionService, IPEndpointHasher> m_connections;
-	//std::unordered_map<CustomSocket::IPEndpoint, ConnectionService> m_connections;
+	//std::unordered_map<CustomSocket::IPEndpoint, ConnectionService, IPEndpointHasher> m_connections;
+	CONNECTIONS m_connections;
 
 	bool m_isRunning;
 	HANDLE m_getInfoEvent;

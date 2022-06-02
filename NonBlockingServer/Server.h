@@ -32,12 +32,22 @@ protected:
 	{
 		std::size_t operator()(const CustomSocket::IPEndpoint& key) const
 		{
-			using std::size_t;
-			using std::hash;
-			using std::string;
+			uint32_t ip = 0;
 
-			return ((hash<string>()(key.GetIPString())
-				^ (hash<uint16_t>()(key.GetPort()) << 1)));
+			switch (key.GetIPVersion())
+			{
+			case CustomSocket::IPVersion::IPv4:
+			{
+				memcpy_s(&ip, sizeof(uint32_t),
+						 key.GetIPBytes(), sizeof(uint32_t));
+			}
+			default:
+				break;
+			}
+			
+
+			return ((std::hash<uint32_t>()(ip)
+					^ (std::hash<uint16_t>()(key.GetPort()) << 1)));
 		}
 	};
 
@@ -87,6 +97,7 @@ protected:
 	ListeningService m_listeningSocketService;
 
 	std::unordered_map<CustomSocket::IPEndpoint, ConnectionService, IPEndpointHasher> m_connections;
+	//std::unordered_map<CustomSocket::IPEndpoint, ConnectionService> m_connections;
 
 	bool m_isRunning;
 	HANDLE m_getInfoEvent;

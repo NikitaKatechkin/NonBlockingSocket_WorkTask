@@ -108,7 +108,10 @@ TEST(NonBlockingCallbackServer, PositiveRecieveTest)
 	client.Connect(serverConfig);
 	server.WaitForConnection();
 
-	while (server.GetConnectionList().size() != 1) {}
+	//std::cout << server.GetConnectionList().size();
+	//std::cout << " GGGGGGGGGG" << std::endl;
+
+	//while (server.GetConnectionList().size() != 1) {}
 
 	EXPECT_EQ(server.Recieve("127.0.0.1", 55699, nullptr, 0), CustomSocket::Result::Success);
 

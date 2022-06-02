@@ -261,4 +261,40 @@ namespace CustomSocket
 
 		return result;
 	}
+
+	bool operator<(const IPEndpoint& c1, const IPEndpoint& c2)
+	{
+		bool result = (c1.m_ipVersion < c2.m_ipVersion);
+		bool isIPVersionEqual = (c1.m_ipVersion == c2.m_ipVersion);
+
+		if (isIPVersionEqual == true)
+		{
+			bool isIPEqual = true;
+			switch (c1.m_ipVersion)
+			{
+			case IPVersion::IPv4:
+			{
+				for (size_t index = 0; index < 4; index++)
+				{
+					if (c1.m_ipBytes[index] != c2.m_ipBytes[index])
+					{
+						result = (c1.m_ipBytes[index] < c2.m_ipBytes[index]);
+						isIPEqual = false;
+						break;
+					}
+				}
+				break;
+			}
+			default:
+				break;
+			}
+
+			if (isIPEqual == true)
+			{
+				result = (c1.m_port < c2.m_port);
+			}
+		}
+
+		return result;
+	}
 }

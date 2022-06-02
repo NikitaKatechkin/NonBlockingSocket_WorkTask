@@ -33,6 +33,7 @@ namespace CustomSocket
 		friend std::ostream& operator << (std::ostream& outputStream,
 										  const IPEndpoint& obj);
 		friend bool operator== (const IPEndpoint& c1, const IPEndpoint& c2);
+		friend bool operator< (const IPEndpoint& c1, const IPEndpoint& c2);
 
 	private:
 		std::string m_hostname;

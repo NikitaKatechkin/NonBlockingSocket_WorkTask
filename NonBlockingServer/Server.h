@@ -73,7 +73,9 @@ public:
 							  const void* data, int numberOfBytes); //+
 
 	void WaitForConnection(); //+
+
 	std::vector<CustomSocket::IPEndpoint> GetConnectionList(); //+
+	CustomSocket::IPEndpoint GetServerIPConfig();
 
 protected:
 	CustomSocket::Result Disconnect(const std::string& ip, const uint16_t port); //+

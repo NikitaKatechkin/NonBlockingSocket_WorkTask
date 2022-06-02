@@ -246,6 +246,11 @@ std::vector<CustomSocket::IPEndpoint> Server::GetConnectionList()
 	return result;
 }
 
+CustomSocket::IPEndpoint Server::GetServerIPConfig()
+{
+	return m_listeningSocketService.m_socketInfo.second;
+}
+
 // MUTEX SAFE
 CustomSocket::Result Server::Disconnect(const std::string& ip, const uint16_t port)
 {

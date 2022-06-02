@@ -2,58 +2,49 @@
 
 #include <NonBlockingCallbackServer/CalbackServer.h>
 
+const std::string serverIP = "127.0.0.1";
+const uint32_t serverPort = 0;
+const CustomSocket::IPEndpoint serverConfig(serverIP, serverPort);
+
+const std::string invalidServerIP = "327.0.0.1";
+
+const std::string clientIP = "127.0.0.1";
+const uint32_t clientPort = 0;
+const CustomSocket::IPEndpoint clientConfig(clientIP, clientPort);
+
+
 TEST(NonBlockingCallbackServer, ConstructorTest)
 {
-	EXPECT_NO_THROW(CallbackServer(CustomSocket::IPEndpoint("127.0.0.1", 4790)));
-	EXPECT_ANY_THROW(CallbackServer(CustomSocket::IPEndpoint("327.0.0.1", 4790)));
+	EXPECT_NO_THROW(CallbackServer test(serverConfig));
+	EXPECT_ANY_THROW(CallbackServer test(
+		CustomSocket::IPEndpoint(invalidServerIP, serverPort)));
 }
 
 TEST(NonBlockingCallbackServer, AdditionalConstructorTest)
 {
-	EXPECT_NO_THROW(CallbackServer("127.0.0.1", 4790));
-	EXPECT_ANY_THROW(CallbackServer("327.0.0.1", 4790));
+	EXPECT_NO_THROW(CallbackServer test(serverIP, serverPort));
+	EXPECT_ANY_THROW(CallbackServer test(invalidServerIP, serverPort));
 }
 
 TEST(NonBlockingCallbackServer, PositiveRunTest)
 {
-	CallbackServer server("127.0.0.1", 4790);
+	CallbackServer server(serverConfig);
+
 	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
-
-	server.Stop();
-}
-
-TEST(NonBlockingCallbackServer, NegativeRunTest)
-{
-	CallbackServer server("127.0.0.1", 4790);
-	EXPECT_ANY_THROW(CallbackServer("127.0.0.1", 4790));
-
-	server.Run();
-	//EXPECT_EQ(failing_server.Run(), CustomSocket::Result::Fail);
-
-	server.Stop();
+	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 }
 
 TEST(NonBlockingCallbackServer, PositiveStopTest)
 {
-	CallbackServer server("127.0.0.1", 4790);
-	server.Run();
+	CallbackServer server(serverConfig);
 
-	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
-}
-
-TEST(NonBlockingCallbackServer, NegativeStopTest)
-{
-	CallbackServer server("127.0.0.1", 4790);
-	server.Run();
-
-	CustomSocket::NetworkAPIInitializer::Shutdown();
-
+	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 }
 
 TEST(NonBlockingCallbackServer, PositiveEmptyConnectionListTest)
 {
-	CallbackServer server("127.0.0.1", 4790);
+	CallbackServer server(serverConfig);
 	server.Run();
 
 	std::vector<CustomSocket::IPEndpoint> empty_list;
@@ -64,24 +55,23 @@ TEST(NonBlockingCallbackServer, PositiveEmptyConnectionListTest)
 
 TEST(NonBlockingCallbackServer, PositiveNonEmptyConnectionListTest)
 {
-	CallbackServer server("127.0.0.1", 4790);
+	CallbackServer server(serverConfig);
 	server.Run();
 
 	CustomSocket::Socket client;
-
-	//std::string clientIP = "127.0.0.1";
-	//clientIP.resize(16);
-	//const uint16_t port = 55687;
-
-	const CustomSocket::IPEndpoint clientConfig("127.0.0.1", 55687);
+	//const CustomSocket::IPEndpoint clientConfig("127.0.0.1", 55687);
 
 	EXPECT_EQ(client.Create(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Bind(&clientConfig), CustomSocket::Result::Success);
 	
-	client.Connect(CustomSocket::IPEndpoint("127.0.0.1", 4790));
+	client.Connect(server.GetServerIPConfig());
+
+	CustomSocket::IPEndpoint clientIPInfo;
+	EXPECT_EQ(client.GetSocketInfo(&clientIPInfo), 
+			  CustomSocket::Result::Success);
 
 	std::vector<CustomSocket::IPEndpoint> list;
-	list.push_back(clientConfig);
+	list.push_back(clientIPInfo);
 
 	server.WaitForConnection();
 	EXPECT_EQ(server.GetConnectionList(), list);
@@ -94,8 +84,8 @@ TEST(NonBlockingCallbackServer, PositiveNonEmptyConnectionListTest)
 
 TEST(NonBlockingCallbackServer, PositiveRecieveTest)
 {
-	const CustomSocket::IPEndpoint clientConfig("127.0.0.1", 55699);
-	const CustomSocket::IPEndpoint serverConfig("127.0.0.1", 4790);
+	//const CustomSocket::IPEndpoint clientConfig("127.0.0.1", 55699);
+	//const CustomSocket::IPEndpoint serverConfig("127.0.0.1", 0);
 
 	CallbackServer server(serverConfig);
 	server.Run();
@@ -105,35 +95,38 @@ TEST(NonBlockingCallbackServer, PositiveRecieveTest)
 	client.Create();
 	client.Bind(&clientConfig);
 
-	client.Connect(serverConfig);
+	client.Connect(server.GetServerIPConfig());
 	server.WaitForConnection();
 
-	//std::cout << server.GetConnectionList().size();
-	//std::cout << " GGGGGGGGGG" << std::endl;
+	CustomSocket::IPEndpoint clientIPInfo;
+	EXPECT_EQ(client.GetSocketInfo(&clientIPInfo),
+		CustomSocket::Result::Success);
 
-	//while (server.GetConnectionList().size() != 1) {}
-
-	EXPECT_EQ(server.Recieve("127.0.0.1", 55699, nullptr, 0), CustomSocket::Result::Success);
+	EXPECT_EQ(server.Recieve(clientIPInfo.GetIPString(),
+							 clientIPInfo.GetPort(),
+							 nullptr, 
+							 0), CustomSocket::Result::Success);
 
 	server.Stop();
 }
 
 TEST(NonBlockingCallbackServer, NegativeRecieveTest)
 {
-	const CustomSocket::IPEndpoint serverConfig("127.0.0.1", 4790);
+	//const CustomSocket::IPEndpoint serverConfig("127.0.0.1", 0);
 
 	CallbackServer server(serverConfig);
 	server.Run();
 
-	EXPECT_EQ(server.Recieve("127.0.0.1", 55699, nullptr, 0), CustomSocket::Result::Fail);
+	EXPECT_EQ(server.Recieve(clientIP, clientPort, nullptr, 0), 
+			  CustomSocket::Result::Fail);
 
 	server.Stop();
 }
 
 TEST(NonBlockingCallbackServer, PositiveSendTest)
 {
-	const CustomSocket::IPEndpoint clientConfig("127.0.0.1", 55699);
-	const CustomSocket::IPEndpoint serverConfig("127.0.0.1", 4790);
+	//const CustomSocket::IPEndpoint clientConfig("127.0.0.1", 55699);
+	//const CustomSocket::IPEndpoint serverConfig("127.0.0.1", 0);
 
 	CallbackServer server(serverConfig);
 	server.Run();
@@ -143,24 +136,30 @@ TEST(NonBlockingCallbackServer, PositiveSendTest)
 	client.Create();
 	client.Bind(&clientConfig);
 
-	client.Connect(serverConfig);
+	client.Connect(server.GetServerIPConfig());
 	server.WaitForConnection();
 
-	//while (server.GetConnectionList().size() != 1) {}
+	CustomSocket::IPEndpoint clientIPInfo;
+	EXPECT_EQ(client.GetSocketInfo(&clientIPInfo),
+			  CustomSocket::Result::Success);
 
-	EXPECT_EQ(server.Send("127.0.0.1", 55699, nullptr, 0), CustomSocket::Result::Success);
+	EXPECT_EQ(server.Send(clientIPInfo.GetIPString(),
+						  clientIPInfo.GetPort(),
+						  nullptr, 
+						  0),
+			  CustomSocket::Result::Success);
 
 	server.Stop();
 }
 
 TEST(NonBlockingCallbackServer, NegativeSendTest)
 {
-	const CustomSocket::IPEndpoint serverConfig("127.0.0.1", 4790);
+	//const CustomSocket::IPEndpoint serverConfig("127.0.0.1", 0);
 
 	CallbackServer server(serverConfig);
 	server.Run();
 
-	EXPECT_EQ(server.Send("127.0.0.1", 55699, nullptr, 0), CustomSocket::Result::Fail);
+	EXPECT_EQ(server.Send(clientIP, clientPort, nullptr, 0), CustomSocket::Result::Fail);
 
 	server.Stop();
 }

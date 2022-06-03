@@ -205,12 +205,12 @@ TEST(NonBlockingSocket, PositiveBindAndListenCompitabilityTest)
 
 int main(int argc, char* argv[])
 {
-	///**
+	/**
 	::testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
-	//**/
+	**/
 
-	/**
+	///**
 	const int bufSize = 256;
 
 	CallbackServer server("127.0.0.1", 4790);
@@ -235,5 +235,5 @@ int main(int argc, char* argv[])
 
 	system("pause");
 	return 0;
-	**/
+	//**/
 }

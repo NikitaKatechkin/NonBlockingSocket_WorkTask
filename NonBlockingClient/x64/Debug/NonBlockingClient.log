@@ -1,2 +1,3 @@
-﻿  Source.cpp
-  NonBlockingClient.vcxproj -> E:\root_folder\repos\NonBlockingSocket_WorkTask\x64\Debug\NonBlockingClient.exe
+﻿  Client.cpp
+  Source.cpp
+  NonBlockingClient.vcxproj -> C:\Users\nikita.katechkin\source\repos\NonBlockingSocket\x64\Debug\NonBlockingClient.exe

@@ -18,6 +18,7 @@ namespace CustomSocket
 		IPEndpoint(const std::string& ip, const uint16_t port);
 		IPEndpoint(sockaddr* addr);
 		IPEndpoint(const IPEndpoint& copy);
+		//IPEndpoint(IPEndpoint&& moveable) = delete;
 		~IPEndpoint();
 
 	public:
@@ -30,6 +31,7 @@ namespace CustomSocket
 
 	public:
 		IPEndpoint& operator=(const IPEndpoint& copy);
+		//IPEndpoint&& operator=(IPEndpoint&& moveable) = delete;
 
 	public:
 		friend std::ostream& operator << (std::ostream& outputStream,

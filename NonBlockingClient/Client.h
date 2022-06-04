@@ -2,6 +2,7 @@
 
 #include <NonBlockingSocket/IncludeMe.h>
 #include <thread>
+#include <mutex>
 
 class Client
 {
@@ -56,4 +57,7 @@ protected:
 
 	bool m_isRunning = false;
 	std::thread m_processThread;
+
+	std::mutex m_coutMutex;
+	std::mutex m_operationMutex;
 };

@@ -124,8 +124,11 @@ CustomSocket::Result Client::Disconnect()
 
 CustomSocket::Result Client::Recieve(void* data, int numberOfBytes)
 {
-	auto result = (m_service.m_socketFD.revents & POLLWRNORM) ? CustomSocket::Result::Success :
-		CustomSocket::Result::Fail;
+	std::lock_guard<std::mutex> operationLock(m_operationMutex);
+
+	auto result = (m_service.m_socketFD.revents & POLLWRNORM) && (m_service.m_readBuffer == nullptr) ? 
+																	CustomSocket::Result::Success :
+																	CustomSocket::Result::Fail;
 
 
 	if (result == CustomSocket::Result::Success)
@@ -142,8 +145,11 @@ CustomSocket::Result Client::Recieve(void* data, int numberOfBytes)
 
 CustomSocket::Result Client::Send(const void* data, int numberOfBytes)
 {
-	auto result = (m_service.m_socketFD.revents & POLLWRNORM) ? CustomSocket::Result::Success :
-		CustomSocket::Result::Fail;
+	std::lock_guard<std::mutex> operationLock(m_operationMutex);
+
+	auto result = (m_service.m_socketFD.revents & POLLWRNORM) && (m_service.m_writeBuffer == nullptr) 
+																	? CustomSocket::Result::Success 
+																	: CustomSocket::Result::Fail;
 
 
 	if (result == CustomSocket::Result::Success)
@@ -176,33 +182,47 @@ void Client::ProcessLoop()
 	{
 		size_t numOfAccuredEvents = WSAPoll(&m_service.m_socketFD, 1, 1);
 
-		if (m_service.m_socketFD.revents & POLLWRNORM)
+		if (numOfAccuredEvents > 0)
 		{
-			if (isConnected == false)
+			/**
+			if (m_service.m_socketFD.revents & POLLWRNORM)
 			{
-				OnConnect();
+				if (isConnected == false)
+				{
+					OnConnect();
+				}
+				isConnected = true;
 			}
-			isConnected = true;
-		}
-		else
-		{
+			else
+			{
+				if (isConnected == true)
+				{
+					OnDisconnect();
+				}
+				isConnected = false;
+			}
+			**/
+
+			bool currentConnectionStatus = m_service.m_socketFD.revents & POLLWRNORM;
+			if (currentConnectionStatus != isConnected)
+			{
+				(isConnected == true) ? OnDisconnect() : OnConnect();
+			}
+			isConnected = currentConnectionStatus;
+
 			if (isConnected == true)
 			{
-				OnDisconnect();
+				ProcessRecieving();
+				ProcessSending();
 			}
-			isConnected = false;
-		}
-
-		if (isConnected == true)
-		{
-			ProcessRecieving();
-			ProcessSending();
 		}
 	}
 }
 
 void Client::ProcessRecieving()
 {
+	std::lock_guard<std::mutex> operationLock(m_operationMutex);
+
 	if ((m_service.m_socketFD.revents & POLLRDNORM) && 
 		(m_service.m_onRecieveFlag) == true)
 	{
@@ -227,6 +247,7 @@ void Client::ProcessRecieving()
 				{
 					OnRecieve(m_service.m_readBuffer, bytesRecieved);
 
+					m_service.m_readBuffer = nullptr;
 					m_service.m_bytesToRecieve = 0;
 					m_service.m_onRecieveFlag = false;
 				}
@@ -237,6 +258,8 @@ void Client::ProcessRecieving()
 
 void Client::ProcessSending()
 {
+	std::lock_guard<std::mutex> operationLock(m_operationMutex);
+
 	if ((m_service.m_socketFD.revents & POLLWRNORM) &&
 		(m_service.m_onSendFlag) == true)
 	{
@@ -261,6 +284,7 @@ void Client::ProcessSending()
 				{
 					OnSend(m_service.m_writeBuffer, bytesSent);
 
+					m_service.m_writeBuffer = nullptr;
 					m_service.m_bytesToSend = 0;
 					m_service.m_onSendFlag = false;
 				}
@@ -271,6 +295,9 @@ void Client::ProcessSending()
 
 void Client::OnConnect()
 {
+	//std::lock_guard<std::mutex> operationLock(m_operationMutex);
+	std::lock_guard<std::mutex> coutLock(m_coutMutex);
+
 	std::cout << "[SERVICE INFO]: ";// << "{IP = " << IP;
 	//std::cout << "} {PORT = " << port << "} ";
 	std::cout << "{STATUS = CONNECTED}" << std::endl;
@@ -278,6 +305,9 @@ void Client::OnConnect()
 
 void Client::OnDisconnect()
 {
+	//std::lock_guard<std::mutex> operationLock(m_operationMutex);
+	std::lock_guard<std::mutex> coutLock(m_coutMutex);
+
 	std::cout << "[SERVICE INFO]: ";// << "{IP = " << IP;
 	//std::cout << "} {PORT = " << port << "} ";
 	std::cout << "{STATUS = DISCONNECTED}" << std::endl;
@@ -285,12 +315,18 @@ void Client::OnDisconnect()
 
 void Client::OnRecieve(char* data, int& bytesRecieved)
 {
+	//std::lock_guard<std::mutex> operationLock(m_operationMutex);
+	std::lock_guard<std::mutex> coutLock(m_coutMutex);
+
 	std::cout << "[SERVER]: " << "{ " << bytesRecieved;
 	std::cout << " bytes recieved } { MESSAGE = \"" << data << "\" }" << std::endl;
 }
 
 void Client::OnSend(const char* data, int& bytesSent)
 {
+	//std::lock_guard<std::mutex> operationLock(m_operationMutex);
+	std::lock_guard<std::mutex> coutLock(m_coutMutex);
+
 	std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
 	std::cout << " bytes sent } { MESSAGE = \"" << data << "\" }" << std::endl;
 }

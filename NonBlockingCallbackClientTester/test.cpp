@@ -94,7 +94,6 @@ TEST(NonBlockingCallbackClient, PositiveSendTest)
 
 	EXPECT_EQ(bytesRecieved, 0);
 	EXPECT_EQ(bytesSent, bufSize);
-	//EXPECT_EQ(memcmp(recieveBuffer, serverMessage, bufSize), 0);
 
 	serverThread.join();
 

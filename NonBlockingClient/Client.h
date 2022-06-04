@@ -37,6 +37,7 @@ public:
 	CustomSocket::Result Recieve(void* data, int numberOfBytes);
 	CustomSocket::Result Send(const void* data, int numberOfBytes);
 
+	CustomSocket::IPEndpoint GetClientIPConfig();
 protected:
 	void Run();
 	void Stop();

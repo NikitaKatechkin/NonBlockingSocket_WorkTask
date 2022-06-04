@@ -2,6 +2,7 @@
 
 int main()
 {
+	/**
 	const int bufSize = 256;
 
 	CallbackClient client("127.0.0.1", 4791);
@@ -20,5 +21,7 @@ int main()
 	client.Disconnect();
 
 	system("pause");
+	**/
+
 	return 0;
 }

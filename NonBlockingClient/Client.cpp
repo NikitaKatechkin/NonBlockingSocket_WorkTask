@@ -162,6 +162,11 @@ CustomSocket::Result Client::Send(const void* data, int numberOfBytes)
 	return result;
 }
 
+CustomSocket::IPEndpoint Client::GetClientIPConfig()
+{
+	return m_service.m_socketInfo.second;
+}
+
 void Client::Run()
 {
 	m_isRunning = true;

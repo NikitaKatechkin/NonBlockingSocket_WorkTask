@@ -110,6 +110,52 @@ CustomSocket::Result Client::Connect(const CustomSocket::IPEndpoint& serverEndpo
 	return result;
 }
 
+CustomSocket::Result Client::Disconnect()
+{
+	auto result = (m_service.m_socketFD.revents & POLLWRNORM) ? CustomSocket::Result::Success :
+																CustomSocket::Result::Fail;
+	if (result == CustomSocket::Result::Success)
+	{
+		result = m_service.m_socketInfo.first.Close();
+	}
+
+	return result;
+}
+
+CustomSocket::Result Client::Recieve(void* data, int numberOfBytes)
+{
+	auto result = (m_service.m_socketFD.revents & POLLWRNORM) ? CustomSocket::Result::Success :
+		CustomSocket::Result::Fail;
+
+
+	if (result == CustomSocket::Result::Success)
+	{
+		//std::lock_guard<std::mutex> operationLock(m_operationMutex);
+
+		m_service.m_readBuffer = static_cast<char*>(data);
+		m_service.m_bytesToRecieve = numberOfBytes;
+		m_service.m_onRecieveFlag = true;
+	}
+
+	return result;
+}
+
+CustomSocket::Result Client::Send(const void* data, int numberOfBytes)
+{
+	auto result = (m_service.m_socketFD.revents & POLLWRNORM) ? CustomSocket::Result::Success :
+		CustomSocket::Result::Fail;
+
+
+	if (result == CustomSocket::Result::Success)
+	{
+		m_service.m_writeBuffer = static_cast<const char*>(data);
+		m_service.m_bytesToSend = numberOfBytes;
+		m_service.m_onSendFlag = true;
+	}
+
+	return result;
+}
+
 void Client::Run()
 {
 	m_isRunning = true;
@@ -124,14 +170,31 @@ void Client::Stop()
 
 void Client::ProcessLoop()
 {
+	bool isConnected = false;
+
 	while (m_isRunning == true)
 	{
 		size_t numOfAccuredEvents = WSAPoll(&m_service.m_socketFD, 1, 1);
-		bool isConnected = (m_service.m_socketFD.revents & POLLWRNORM);
+
+		if (m_service.m_socketFD.revents & POLLWRNORM)
+		{
+			if (isConnected == false)
+			{
+				OnConnect();
+			}
+			isConnected = true;
+		}
+		else
+		{
+			if (isConnected == true)
+			{
+				OnDisconnect();
+			}
+			isConnected = false;
+		}
 
 		if (isConnected == true)
 		{
-			OnConnect();
 			ProcessRecieving();
 			ProcessSending();
 		}
@@ -154,7 +217,7 @@ void Client::ProcessRecieving()
 			{
 				//SERVER WAS DISCONNECTED
 
-				
+				Disconnect();
 			}
 			else
 			{
@@ -162,7 +225,7 @@ void Client::ProcessRecieving()
 
 				if (m_service.m_bytesToRecieve <= 0)
 				{
-					//OnRecieve(ip, port, m_service.m_readBuffer, bytesRecieved);
+					OnRecieve(m_service.m_readBuffer, bytesRecieved);
 
 					m_service.m_bytesToRecieve = 0;
 					m_service.m_onRecieveFlag = false;
@@ -188,7 +251,7 @@ void Client::ProcessSending()
 			{
 				//SERVER WAS DISCONNECTED
 
-
+				Disconnect();
 			}
 			else
 			{
@@ -196,7 +259,7 @@ void Client::ProcessSending()
 
 				if (m_service.m_bytesToSend <= 0)
 				{
-					//OnRecieve(ip, port, m_service.m_readBuffer, bytesRecieved);
+					OnSend(m_service.m_writeBuffer, bytesSent);
 
 					m_service.m_bytesToSend = 0;
 					m_service.m_onSendFlag = false;
@@ -211,4 +274,23 @@ void Client::OnConnect()
 	std::cout << "[SERVICE INFO]: ";// << "{IP = " << IP;
 	//std::cout << "} {PORT = " << port << "} ";
 	std::cout << "{STATUS = CONNECTED}" << std::endl;
+}
+
+void Client::OnDisconnect()
+{
+	std::cout << "[SERVICE INFO]: ";// << "{IP = " << IP;
+	//std::cout << "} {PORT = " << port << "} ";
+	std::cout << "{STATUS = DISCONNECTED}" << std::endl;
+}
+
+void Client::OnRecieve(char* data, int& bytesRecieved)
+{
+	std::cout << "[SERVER]: " << "{ " << bytesRecieved;
+	std::cout << " bytes recieved } { MESSAGE = \"" << data << "\" }" << std::endl;
+}
+
+void Client::OnSend(const char* data, int& bytesSent)
+{
+	std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
+	std::cout << " bytes sent } { MESSAGE = \"" << data << "\" }" << std::endl;
 }

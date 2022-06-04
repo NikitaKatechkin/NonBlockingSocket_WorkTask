@@ -109,15 +109,22 @@ int main()
 	return 0;
 	**/
 
+	const int bufSize = 256;
+
 	Client client("127.0.0.1", 4791);
-	auto status = client.Connect(CustomSocket::IPEndpoint("127.0.0.1", 4790));
+	client.Connect(CustomSocket::IPEndpoint("127.0.0.1", 4790));
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(250));
 	
-	if (status == CustomSocket::Result::Success)
-	{
-		std::cout << "STAGE 1 PASSED" << std::endl;
-	}
+	const char writeBuffer[bufSize] = { "Hello world from client)))\0" };
+	client.Send(writeBuffer, bufSize);
+
+	char readBuffer[bufSize] = {};
+	client.Recieve(readBuffer, bufSize);
 
 	std::this_thread::sleep_for(std::chrono::seconds(1));
+
+	client.Disconnect();
 
 	system("pause");
 	return 0;

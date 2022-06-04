@@ -23,23 +23,34 @@ protected:
 
 		bool m_onRecieveFlag = false;
 	};
+
 public:
 	Client(const CustomSocket::IPEndpoint& clientConfig = 
 										CustomSocket::IPEndpoint("127.0.0.1", 0));
 	Client(const std::string& IP = "127.0.0.1", const uint16_t port = 0);
 	~Client();
-
+public:
 	CustomSocket::Result Connect(const CustomSocket::IPEndpoint& serverEndpoint);
+	CustomSocket::Result Disconnect();
+
+	CustomSocket::Result Recieve(void* data, int numberOfBytes);
+	CustomSocket::Result Send(const void* data, int numberOfBytes);
+
 protected:
 	void Run();
 	void Stop();
 
+protected:
 	void ProcessLoop();
 	void ProcessRecieving();
 	void ProcessSending();
 
-	//void OnConnect(const std::string& IP, const uint16_t port);
-	void OnConnect();
+protected:
+	virtual void OnConnect();
+	virtual void OnDisconnect();
+
+	virtual void OnRecieve(char* data, int& bytesRecieved);
+	virtual void OnSend(const char* data, int& bytesSent);
 protected:
 	ConnectionService m_service;
 

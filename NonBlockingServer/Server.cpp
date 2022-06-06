@@ -94,6 +94,11 @@ Server::Server(const std::string& ip, const uint16_t port) :
 
 Server::~Server()
 {
+	if (m_isRunning == true)
+	{
+		Stop();
+	}
+
 	CustomSocket::NetworkAPIInitializer::Shutdown();
 }
 
@@ -187,10 +192,15 @@ CustomSocket::Result Server::Recieve(const std::string& ip, const uint16_t port,
 	if (result == CustomSocket::Result::Success)
 	{
 		//std::lock_guard<std::mutex> operationLock(m_operationMutex);
-		
-		find_iter->second.m_readBuffer = static_cast<char*>(data);
-		find_iter->second.m_bytesToRecieve = numberOfBytes;
-		find_iter->second.m_onRecieveFlag = true;
+		result = (find_iter->second.m_readBuffer == nullptr) ? CustomSocket::Result::Success :
+															   CustomSocket::Result::Fail;
+
+		if (result == CustomSocket::Result::Success)
+		{
+			find_iter->second.m_readBuffer = static_cast<char*>(data);
+			find_iter->second.m_bytesToRecieve = numberOfBytes;
+			find_iter->second.m_onRecieveFlag = true;
+		}
 	}
 
 	return result;
@@ -211,9 +221,15 @@ CustomSocket::Result Server::Send(const std::string& ip, const uint16_t port,
 	{
 		//std::lock_guard<std::mutex> operationLock(m_operationMutex);
 
-		find_iter->second.m_writeBuffer = static_cast<const char*>(data);
-		find_iter->second.m_bytesToSend = numberOfBytes;
-		find_iter->second.m_onSendFlag = true;
+		result = (find_iter->second.m_writeBuffer == nullptr) ? CustomSocket::Result::Success :
+																CustomSocket::Result::Fail;
+
+		if (result == CustomSocket::Result::Success)
+		{
+			find_iter->second.m_writeBuffer = static_cast<const char*>(data);
+			find_iter->second.m_bytesToSend = numberOfBytes;
+			find_iter->second.m_onSendFlag = true;
+		}
 	}
 
 	return result;
@@ -412,6 +428,7 @@ void Server::RecieveProcessing(const std::string& ip, const uint16_t port)
 				{
 					OnRecieve(ip, port, connection.m_readBuffer, bytesRecieved);
 
+					connection.m_readBuffer = nullptr;
 					connection.m_bytesToRecieve = 0;
 					connection.m_onRecieveFlag = false;
 				}
@@ -446,6 +463,7 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 				{
 					OnSend(ip, port, connection.m_writeBuffer, bytesSent);
 
+					connection.m_writeBuffer = nullptr;
 					connection.m_bytesToSend = 0;
 					connection.m_onSendFlag = false;
 				}

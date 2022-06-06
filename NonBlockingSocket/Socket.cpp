@@ -337,19 +337,24 @@ namespace CustomSocket
         return result;
     }
 
-    Result Socket::SendAll(void* data, int& numberOfBytes)
+    Result Socket::SendAll(const void* data, int& numberOfBytes)
     {
         int totalBytesSent = 0;
         Result result = Result::Success;
 
         while (totalBytesSent < numberOfBytes)
         {
+            //std::cout << "uuuuuuuu" << std::endl;
+
             int bytesRemaining = numberOfBytes - totalBytesSent;
             int bytesSent = 0;
             
-            result = Send(reinterpret_cast<char*>(data) + totalBytesSent, 
+            result = Send(reinterpret_cast<const char*>(data) + totalBytesSent, 
                           bytesRemaining, 
                           bytesSent);
+
+            //std::cout << bytesSent << std::endl;
+
             if (result == Result::Fail)
             {
                 break;

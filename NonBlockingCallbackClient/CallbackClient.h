@@ -5,8 +5,7 @@
 class CallbackClient final : public Client
 {
 public:
-	CallbackClient(const CustomSocket::IPEndpoint& clientConfig =
-		CustomSocket::IPEndpoint("127.0.0.1", 0));
+	CallbackClient(const CustomSocket::IPEndpoint& clientConfig);
 	CallbackClient(const std::string& IP = "127.0.0.1", const uint16_t port = 0);
 	~CallbackClient() = default;
 protected:

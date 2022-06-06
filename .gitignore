@@ -1,3 +1,4 @@
 .vs/*
 NonBlockingCallbackServerTester/x64/*
 NonBlockingCallbackClientTester/x64/*
+NonBlockingCallbackHighLoadTester/x64/*

@@ -6,7 +6,7 @@ class CallbackServer final : public Server
 {
 public:
 	CallbackServer(const CustomSocket::IPEndpoint& IPconfig);
-	CallbackServer(const std::string& ip, const uint16_t port);
+	CallbackServer(const std::string& ip = "127.0.0.1", const uint16_t port = 0);
 
 protected:
 	//virtual void RecieveProcessing(const std::string& ip, const uint16_t port) override;

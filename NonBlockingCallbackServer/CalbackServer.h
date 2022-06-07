@@ -2,7 +2,7 @@
 
 #include <NonBlockingServer/Server.h>
 
-class CallbackServer final : public Server
+class CallbackServer : public Server
 {
 public:
 	CallbackServer(const CustomSocket::IPEndpoint& IPconfig);

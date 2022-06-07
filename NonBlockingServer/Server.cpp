@@ -199,6 +199,7 @@ CustomSocket::Result Server::Recieve(const std::string& ip, const uint16_t port,
 		{
 			find_iter->second.m_readBuffer = static_cast<char*>(data);
 			find_iter->second.m_bytesToRecieve = numberOfBytes;
+			find_iter->second.m_readBufferTotalSize = numberOfBytes;
 			find_iter->second.m_onRecieveFlag = true;
 		}
 	}
@@ -228,6 +229,7 @@ CustomSocket::Result Server::Send(const std::string& ip, const uint16_t port,
 		{
 			find_iter->second.m_writeBuffer = static_cast<const char*>(data);
 			find_iter->second.m_bytesToSend = numberOfBytes;
+			find_iter->second.m_writeBufferTotalSize = numberOfBytes;
 			find_iter->second.m_onSendFlag = true;
 		}
 	}
@@ -316,8 +318,8 @@ CustomSocket::Result Server::Connect()
 			ConnectionService newConnectionService({
 				CONNECTION_INFO(std::move(newConnection), newConnectionEndpoint),
 				{ INVALID_SOCKET, (POLLRDNORM | POLLWRNORM), 0},
-				nullptr, 0, false,
-				nullptr, 0, false
+				nullptr, 0, 0, false,
+				nullptr, 0, 0, false
 				});
 
 
@@ -408,7 +410,8 @@ void Server::RecieveProcessing(const std::string& ip, const uint16_t port)
 	{
 		int bytesRecieved = 0;
 
-		if (connection.m_socketInfo.first.Recieve(connection.m_readBuffer,
+		if (connection.m_socketInfo.first.Recieve(
+			connection.m_readBuffer + (connection.m_readBufferTotalSize - connection.m_bytesToRecieve),
 			connection.m_bytesToRecieve,
 			bytesRecieved)
 			== CustomSocket::Result::Success)
@@ -426,7 +429,7 @@ void Server::RecieveProcessing(const std::string& ip, const uint16_t port)
 
 				if (connection.m_bytesToRecieve <= 0)
 				{
-					OnRecieve(ip, port, connection.m_readBuffer, bytesRecieved);
+					OnRecieve(ip, port, connection.m_readBuffer, connection.m_readBufferTotalSize);
 
 					connection.m_readBuffer = nullptr;
 					connection.m_bytesToRecieve = 0;
@@ -445,7 +448,10 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 	{
 		int bytesSent = 0;
 
-		if (connection.m_socketInfo.first.Send(connection.m_writeBuffer, 256, bytesSent)
+		if (connection.m_socketInfo.first.Send(
+			connection.m_writeBuffer + (connection.m_writeBufferTotalSize - connection.m_bytesToSend),
+			connection.m_bytesToSend, 
+			bytesSent)
 			== CustomSocket::Result::Success)
 		{
 			if (bytesSent == 0)
@@ -461,7 +467,7 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 
 				if (connection.m_bytesToSend <= 0)
 				{
-					OnSend(ip, port, connection.m_writeBuffer, bytesSent);
+					OnSend(ip, port, connection.m_writeBuffer, connection.m_writeBufferTotalSize);
 
 					connection.m_writeBuffer = nullptr;
 					connection.m_bytesToSend = 0;

@@ -283,6 +283,9 @@ TEST(HighLoadTestCase, AsynchServerSendBigOne)
 
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
+
+	delete[] serverMessage;
+	delete[] clientBuffer;
 }
 
 
@@ -341,6 +344,9 @@ TEST(HighLoadTestCase, AsynchServerRecieveBigOne)
 
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
+
+	delete[] serverBuffer;
+	delete[] clientMessage;
 }
 
 
@@ -400,6 +406,9 @@ TEST(HighLoadTestCase, AsynchClientSendBigOne)
 
 	EXPECT_EQ(newConnectionSocket.Close(), CustomSocket::Result::Success);
 	EXPECT_EQ(server.Close(), CustomSocket::Result::Success);
+
+	delete[] serverBuffer;
+	delete[] clientMessage;
 }
 
 
@@ -461,7 +470,11 @@ TEST(HighLoadTestCase, AsynchClientRecieveBigOne)
 
 	EXPECT_EQ(newConnectionSocket.Close(), CustomSocket::Result::Success);
 	EXPECT_EQ(server.Close(), CustomSocket::Result::Success);
+
+	delete[] serverMessage;
+	delete[] clientBuffer;
 }
+
 
 int main(int argc, char* argv[])
 {

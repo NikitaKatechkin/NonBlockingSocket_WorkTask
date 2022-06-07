@@ -15,11 +15,13 @@ protected:
 		WSAPOLLFD m_socketFD;
 
 		const char* m_writeBuffer = nullptr;
+		int m_writeBufferTotalSize = 0;
 		int m_bytesToSend = 0;
 
 		bool m_onSendFlag = false;
 
 		char* m_readBuffer = nullptr;
+		int m_readBufferTotalSize = 0;
 		int m_bytesToRecieve = 0;
 
 		bool m_onRecieveFlag = false;

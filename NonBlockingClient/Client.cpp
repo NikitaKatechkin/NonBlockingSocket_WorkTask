@@ -137,6 +137,7 @@ CustomSocket::Result Client::Recieve(void* data, int numberOfBytes)
 
 		m_service.m_readBuffer = static_cast<char*>(data);
 		m_service.m_bytesToRecieve = numberOfBytes;
+		m_service.m_readBufferTotalSize = numberOfBytes;
 		m_service.m_onRecieveFlag = true;
 	}
 
@@ -156,6 +157,7 @@ CustomSocket::Result Client::Send(const void* data, int numberOfBytes)
 	{
 		m_service.m_writeBuffer = static_cast<const char*>(data);
 		m_service.m_bytesToSend = numberOfBytes;
+		m_service.m_writeBufferTotalSize = numberOfBytes;
 		m_service.m_onSendFlag = true;
 	}
 
@@ -233,9 +235,10 @@ void Client::ProcessRecieving()
 	{
 		int bytesRecieved = 0;
 		//SMTH SHOULD BE READ
-		if (m_service.m_socketInfo.first.Recieve(m_service.m_readBuffer,
-												 m_service.m_bytesToRecieve,
-												 bytesRecieved)
+		if (m_service.m_socketInfo.first.Recieve(
+			m_service.m_readBuffer + (m_service.m_readBufferTotalSize - m_service.m_bytesToRecieve),
+			m_service.m_bytesToRecieve,
+			bytesRecieved)
 			== CustomSocket::Result::Success)
 		{
 			if (bytesRecieved == 0)
@@ -250,7 +253,7 @@ void Client::ProcessRecieving()
 
 				if (m_service.m_bytesToRecieve <= 0)
 				{
-					OnRecieve(m_service.m_readBuffer, bytesRecieved);
+					OnRecieve(m_service.m_readBuffer, m_service.m_readBufferTotalSize);
 
 					m_service.m_readBuffer = nullptr;
 					m_service.m_bytesToRecieve = 0;
@@ -270,9 +273,10 @@ void Client::ProcessSending()
 	{
 		int bytesSent = 0;
 		//SMTH SHOULD BE READ
-		if (m_service.m_socketInfo.first.Send(m_service.m_writeBuffer,
-											  m_service.m_bytesToSend,
-											  bytesSent)
+		if (m_service.m_socketInfo.first.Send(
+			m_service.m_writeBuffer + (m_service.m_writeBufferTotalSize - m_service.m_bytesToSend),
+			m_service.m_bytesToSend,
+			bytesSent)
 			== CustomSocket::Result::Success)
 		{
 			if (bytesSent == 0)
@@ -287,7 +291,7 @@ void Client::ProcessSending()
 
 				if (m_service.m_bytesToSend <= 0)
 				{
-					OnSend(m_service.m_writeBuffer, bytesSent);
+					OnSend(m_service.m_writeBuffer, m_service.m_writeBufferTotalSize);
 
 					m_service.m_writeBuffer = nullptr;
 					m_service.m_bytesToSend = 0;

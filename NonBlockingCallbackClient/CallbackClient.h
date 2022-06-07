@@ -2,7 +2,7 @@
 
 #include <NonBlockingClient/Client.h>
 
-class CallbackClient final : public Client
+class CallbackClient : public Client
 {
 public:
 	CallbackClient(const CustomSocket::IPEndpoint& clientConfig);

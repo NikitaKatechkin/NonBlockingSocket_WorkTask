@@ -3,7 +3,7 @@
 #include <NonBlockingCallbackServer/CalbackServer.h>
 #include <NonBlockingCallbackClient/CallbackClient.h>
 
-
+/**
 TEST(HighLoadTestCase, AsynchServerSend) 
 {
 	CallbackServer server;
@@ -43,10 +43,12 @@ TEST(HighLoadTestCase, AsynchServerSend)
 		EXPECT_EQ(server.Send(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
 					serverMessage, bufSize), CustomSocket::Result::Success);
 
-		//std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		EXPECT_EQ(client.RecieveAll(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		EXPECT_EQ(server.WaitClientOnSendEvent(clientIPConfig.GetIPString(), 
+											   clientIPConfig.GetPort()), 
+				  CustomSocket::Result::Success);
+
 	}
 
 	//--------------------------------------------------------------------
@@ -54,7 +56,6 @@ TEST(HighLoadTestCase, AsynchServerSend)
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
 }
-
 
 TEST(HighLoadTestCase, AsynchServerRecieve)
 {
@@ -99,12 +100,9 @@ TEST(HighLoadTestCase, AsynchServerRecieve)
 		EXPECT_EQ(server.Recieve(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
 								 serverBuffer, bufSize), CustomSocket::Result::Success);
 
-		//client.SendAll(clientMessage, bytesToSend);
-
-		//std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		EXPECT_EQ(server.WaitClientOnRecieveEvent(clientIPConfig.GetIPString(),
+												  clientIPConfig.GetPort()),
+				  CustomSocket::Result::Success);
 	}
 
 	//--------------------------------------------------------------------
@@ -112,7 +110,6 @@ TEST(HighLoadTestCase, AsynchServerRecieve)
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
 }
-
 
 TEST(HighLoadTestCase, AsynchClientSend)
 {
@@ -163,7 +160,7 @@ TEST(HighLoadTestCase, AsynchClientSend)
 		EXPECT_EQ(newConnectionSocket.RecieveAll(serverBuffer, bytesToRecv),
 				  CustomSocket::Result::Success);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		EXPECT_EQ(client.WaitOnSendEvent(), CustomSocket::Result::Success);
 	}
 
 	//--------------------------------------------------------------------
@@ -171,7 +168,6 @@ TEST(HighLoadTestCase, AsynchClientSend)
 	EXPECT_EQ(newConnectionSocket.Close(), CustomSocket::Result::Success);
 	EXPECT_EQ(server.Close(), CustomSocket::Result::Success);
 }
-
 
 TEST(HighLoadTestCase, AsynchClientRecieve)
 {
@@ -224,7 +220,7 @@ TEST(HighLoadTestCase, AsynchClientRecieve)
 		EXPECT_EQ(client.Recieve(clientBuffer, bytesToRecv),
 				  CustomSocket::Result::Success);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		EXPECT_EQ(client.WaitOnRecieveEvent(), CustomSocket::Result::Success);
 	}
 
 	//--------------------------------------------------------------------
@@ -232,7 +228,6 @@ TEST(HighLoadTestCase, AsynchClientRecieve)
 	EXPECT_EQ(newConnectionSocket.Close(), CustomSocket::Result::Success);
 	EXPECT_EQ(server.Close(), CustomSocket::Result::Success);
 }
-
 
 TEST(HighLoadTestCase, AsynchServerSendBigOne)
 {
@@ -273,10 +268,11 @@ TEST(HighLoadTestCase, AsynchServerSendBigOne)
 		EXPECT_EQ(server.Send(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
 			serverMessage, bufSize), CustomSocket::Result::Success);
 
-		//std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		EXPECT_EQ(client.RecieveAll(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		EXPECT_EQ(server.WaitClientOnSendEvent(clientIPConfig.GetIPString(),
+			clientIPConfig.GetPort()),
+			CustomSocket::Result::Success);
 	}
 
 	//--------------------------------------------------------------------
@@ -287,7 +283,6 @@ TEST(HighLoadTestCase, AsynchServerSendBigOne)
 	delete[] serverMessage;
 	delete[] clientBuffer;
 }
-
 
 TEST(HighLoadTestCase, AsynchServerRecieveBigOne)
 {
@@ -330,14 +325,11 @@ TEST(HighLoadTestCase, AsynchServerRecieveBigOne)
 			CustomSocket::Result::Success);
 
 		EXPECT_EQ(server.Recieve(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
-								 serverBuffer, bufSize), CustomSocket::Result::Success);
+			serverBuffer, bufSize), CustomSocket::Result::Success);
 
-		//client.SendAll(clientMessage, bytesToSend);
-
-		//std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		EXPECT_EQ(server.WaitClientOnRecieveEvent(clientIPConfig.GetIPString(),
+			clientIPConfig.GetPort()),
+			CustomSocket::Result::Success);
 	}
 
 	//--------------------------------------------------------------------
@@ -348,7 +340,6 @@ TEST(HighLoadTestCase, AsynchServerRecieveBigOne)
 	delete[] serverBuffer;
 	delete[] clientMessage;
 }
-
 
 TEST(HighLoadTestCase, AsynchClientSendBigOne)
 {
@@ -399,7 +390,7 @@ TEST(HighLoadTestCase, AsynchClientSendBigOne)
 		EXPECT_EQ(newConnectionSocket.RecieveAll(serverBuffer, bytesToRecv),
 			CustomSocket::Result::Success);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		EXPECT_EQ(client.WaitOnSendEvent(), CustomSocket::Result::Success);
 	}
 
 	//--------------------------------------------------------------------
@@ -410,7 +401,6 @@ TEST(HighLoadTestCase, AsynchClientSendBigOne)
 	delete[] serverBuffer;
 	delete[] clientMessage;
 }
-
 
 TEST(HighLoadTestCase, AsynchClientRecieveBigOne)
 {
@@ -463,7 +453,7 @@ TEST(HighLoadTestCase, AsynchClientRecieveBigOne)
 		EXPECT_EQ(client.Recieve(clientBuffer, bytesToRecv),
 			CustomSocket::Result::Success);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		EXPECT_EQ(client.WaitOnRecieveEvent(), CustomSocket::Result::Success);
 	}
 
 	//--------------------------------------------------------------------
@@ -474,7 +464,100 @@ TEST(HighLoadTestCase, AsynchClientRecieveBigOne)
 	delete[] serverMessage;
 	delete[] clientBuffer;
 }
+**/
 
+TEST(HighLoadTestCase, FullyAsynchServerToClientSend)
+{
+	CallbackServer server;
+
+	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
+
+	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
+
+	//-------------------------------------------------------------------
+
+	CallbackClient client;
+
+	CustomSocket::IPEndpoint clientIPConfig = client.GetClientIPConfig();
+
+	//-------------------------------------------------------------------
+
+	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+	//--------------------------------------------------------------------
+
+	///**
+	const int bufSize = 4096;
+	const char* serverMessage = new char[bufSize]
+	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+
+	int bytesToRecieve = bufSize;
+	char* clientBuffer = new char[bytesToRecieve] {};
+
+	for (size_t index = 0; index < 1024; index++)
+	{
+		EXPECT_EQ(server.Send(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
+			serverMessage, bufSize), CustomSocket::Result::Success);
+
+		EXPECT_EQ(server.WaitClientOnSendEvent(clientIPConfig.GetIPString(),
+			clientIPConfig.GetPort()),
+			CustomSocket::Result::Success);
+
+		EXPECT_EQ(client.Recieve(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
+
+		EXPECT_EQ(client.WaitOnRecieveEvent(), CustomSocket::Result::Success);
+	}
+	//**/
+
+	//--------------------------------------------------------------------
+}
+
+TEST(HighLoadTestCase, FullyAsynchServerFromClientRecieve)
+{
+	CallbackServer server;
+
+	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
+
+	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
+
+	//-------------------------------------------------------------------
+
+	CallbackClient client;
+
+	CustomSocket::IPEndpoint clientIPConfig = client.GetClientIPConfig();
+
+	//-------------------------------------------------------------------
+
+	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+	//--------------------------------------------------------------------
+
+	///**
+	const int bufSize = 4096;
+	char* serverBuffer = new char[bufSize] {};
+
+	int bytesToSend = bufSize;
+	const char* clientMessage = new char[bufSize]
+	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+
+	for (size_t index = 0; index < 1024; index++)
+	{
+		EXPECT_EQ(client.Send(clientMessage, bufSize),
+			CustomSocket::Result::Success);
+		EXPECT_EQ(client.WaitOnSendEvent(), CustomSocket::Result::Success);
+
+		EXPECT_EQ(server.Recieve(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
+			serverBuffer, bufSize), CustomSocket::Result::Success);
+		EXPECT_EQ(server.WaitClientOnRecieveEvent(clientIPConfig.GetIPString(),
+			clientIPConfig.GetPort()),
+			CustomSocket::Result::Success);
+	}
+	//**/
+
+	//--------------------------------------------------------------------
+}
 
 int main(int argc, char* argv[])
 {

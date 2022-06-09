@@ -11,22 +11,26 @@ class Server
 protected:
 	using CONNECTION_INFO = std::pair<CustomSocket::Socket, CustomSocket::IPEndpoint>;
 
+	template <typename T>
+	struct ServerMessage
+	{
+		T m_buffer = nullptr;
+		int m_bufferTotalSize = 0;
+		int m_bytesToProcess = 0;
+		bool m_onProcessFlag = false;
+	};
+
 	struct ConnectionService
 	{
 		CONNECTION_INFO m_socketInfo;
 		WSAPOLLFD m_socketFD;
 
-		const char* m_writeBuffer = nullptr;
-		int m_writeBufferTotalSize = 0;
-		int m_bytesToSend = 0;
+		ServerMessage<const char*> m_sendMessage;
+		HANDLE m_onSendEvent = CreateEvent(nullptr, TRUE, FALSE, L"OnSendEvent");
 
-		bool m_onSendFlag = false;
+		ServerMessage<char*> m_recieveMessage;
+		HANDLE m_onRecieveEvent = CreateEvent(nullptr, TRUE, FALSE, L"OnRecieveEvent");
 
-		char* m_readBuffer = nullptr;
-		int m_readBufferTotalSize = 0;
-		int m_bytesToRecieve = 0;
-
-		bool m_onRecieveFlag = false;
 	};
 
 	struct IPEndpointHasher
@@ -81,6 +85,9 @@ public:
 
 	CONNECTIONS_LIST GetConnectionList(); //+
 	CustomSocket::IPEndpoint GetServerIPConfig();
+
+	CustomSocket::Result WaitClientOnSendEvent(const std::string& ip, const uint16_t port);
+	CustomSocket::Result WaitClientOnRecieveEvent(const std::string& ip, const uint16_t port);
 
 protected:
 	CustomSocket::Result Disconnect(const std::string& ip, const uint16_t port); //+

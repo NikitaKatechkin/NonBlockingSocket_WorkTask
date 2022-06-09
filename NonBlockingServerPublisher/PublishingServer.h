@@ -9,5 +9,7 @@ public:
 	PublishingServer(const CustomSocket::IPEndpoint& IPconfig);
 	PublishingServer(const std::string& ip = "127.0.0.1", const uint16_t port = 0);
 	~PublishingServer() = default;
+
 protected:
+	virtual void OnConnect(const std::string& ip, const uint16_t port) override;
 };

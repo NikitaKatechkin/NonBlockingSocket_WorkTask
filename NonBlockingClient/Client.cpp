@@ -126,19 +126,20 @@ CustomSocket::Result Client::Recieve(void* data, int numberOfBytes)
 {
 	std::lock_guard<std::mutex> operationLock(m_operationMutex);
 
-	auto result = (m_service.m_socketFD.revents & POLLWRNORM) && (m_service.m_readBuffer == nullptr) ? 
-																	CustomSocket::Result::Success :
-																	CustomSocket::Result::Fail;
+	auto result = ((m_service.m_socketFD.revents & POLLWRNORM) && 
+				  (m_service.m_recieveMessage.m_buffer == nullptr)) ?
+													CustomSocket::Result::Success :
+													CustomSocket::Result::Fail;
 
 
 	if (result == CustomSocket::Result::Success)
 	{
 		//std::lock_guard<std::mutex> operationLock(m_operationMutex);
 
-		m_service.m_readBuffer = static_cast<char*>(data);
-		m_service.m_bytesToRecieve = numberOfBytes;
-		m_service.m_readBufferTotalSize = numberOfBytes;
-		m_service.m_onRecieveFlag = true;
+		m_service.m_recieveMessage.m_buffer = static_cast<char*>(data);
+		m_service.m_recieveMessage.m_bytesToProcess = numberOfBytes;
+		m_service.m_recieveMessage.m_bufferTotalSize = numberOfBytes;
+		m_service.m_recieveMessage.m_onProcessFlag = true;
 	}
 
 	return result;
@@ -148,17 +149,18 @@ CustomSocket::Result Client::Send(const void* data, int numberOfBytes)
 {
 	std::lock_guard<std::mutex> operationLock(m_operationMutex);
 
-	auto result = (m_service.m_socketFD.revents & POLLWRNORM) && (m_service.m_writeBuffer == nullptr) 
-																	? CustomSocket::Result::Success 
-																	: CustomSocket::Result::Fail;
+	auto result = ((m_service.m_socketFD.revents & POLLWRNORM) && 
+				  (m_service.m_sendMessage.m_buffer == nullptr)) 
+														? CustomSocket::Result::Success
+														: CustomSocket::Result::Fail;
 
 
 	if (result == CustomSocket::Result::Success)
 	{
-		m_service.m_writeBuffer = static_cast<const char*>(data);
-		m_service.m_bytesToSend = numberOfBytes;
-		m_service.m_writeBufferTotalSize = numberOfBytes;
-		m_service.m_onSendFlag = true;
+		m_service.m_sendMessage.m_buffer = static_cast<const char*>(data);
+		m_service.m_sendMessage.m_bytesToProcess = numberOfBytes;
+		m_service.m_sendMessage.m_bufferTotalSize = numberOfBytes;
+		m_service.m_sendMessage.m_onProcessFlag = true;
 	}
 
 	return result;
@@ -167,6 +169,26 @@ CustomSocket::Result Client::Send(const void* data, int numberOfBytes)
 CustomSocket::IPEndpoint Client::GetClientIPConfig()
 {
 	return m_service.m_socketInfo.second;
+}
+
+CustomSocket::Result Client::WaitOnRecieveEvent()
+{
+	WaitForSingleObject(m_service.m_onRecieveEvent, INFINITE);
+	auto result = (ResetEvent(m_service.m_onRecieveEvent) == TRUE) ?
+															CustomSocket::Result::Success :
+															CustomSocket::Result::Fail;
+
+	return result;
+}
+
+CustomSocket::Result Client::WaitOnSendEvent()
+{
+	WaitForSingleObject(m_service.m_onSendEvent, INFINITE);
+	auto result = (ResetEvent(m_service.m_onSendEvent) == TRUE) ? 
+															CustomSocket::Result::Success :
+															CustomSocket::Result::Fail;
+
+	return result;
 }
 
 void Client::Run()
@@ -231,13 +253,16 @@ void Client::ProcessRecieving()
 	std::lock_guard<std::mutex> operationLock(m_operationMutex);
 
 	if ((m_service.m_socketFD.revents & POLLRDNORM) && 
-		(m_service.m_onRecieveFlag) == true)
+		(m_service.m_recieveMessage.m_onProcessFlag) == true)
 	{
 		int bytesRecieved = 0;
+		int offset = (m_service.m_recieveMessage.m_bufferTotalSize -
+					  m_service.m_recieveMessage.m_bytesToProcess);
+
 		//SMTH SHOULD BE READ
 		if (m_service.m_socketInfo.first.Recieve(
-			m_service.m_readBuffer + (m_service.m_readBufferTotalSize - m_service.m_bytesToRecieve),
-			m_service.m_bytesToRecieve,
+			m_service.m_recieveMessage.m_buffer + offset,
+			m_service.m_recieveMessage.m_bytesToProcess,
 			bytesRecieved)
 			== CustomSocket::Result::Success)
 		{
@@ -249,15 +274,25 @@ void Client::ProcessRecieving()
 			}
 			else
 			{
-				m_service.m_bytesToRecieve -= bytesRecieved;
+				m_service.m_recieveMessage.m_bytesToProcess -= bytesRecieved;
 
-				if (m_service.m_bytesToRecieve <= 0)
+				if (m_service.m_recieveMessage.m_bytesToProcess <= 0)
 				{
-					OnRecieve(m_service.m_readBuffer, m_service.m_readBufferTotalSize);
+					int tmp_buffer_size = m_service.m_recieveMessage.m_bufferTotalSize;
+					char* tmp_buffer = new char[tmp_buffer_size];
+					memcpy_s(tmp_buffer,
+							 tmp_buffer_size,
+							 m_service.m_recieveMessage.m_buffer,
+							 m_service.m_recieveMessage.m_bufferTotalSize);
 
-					m_service.m_readBuffer = nullptr;
-					m_service.m_bytesToRecieve = 0;
-					m_service.m_onRecieveFlag = false;
+					m_service.m_recieveMessage.m_buffer = nullptr;
+					m_service.m_recieveMessage.m_bytesToProcess = 0;
+					m_service.m_recieveMessage.m_bufferTotalSize = 0;
+					m_service.m_recieveMessage.m_onProcessFlag = false;
+
+					OnRecieve(tmp_buffer, tmp_buffer_size);
+
+					delete[] tmp_buffer;
 				}
 			}
 		}
@@ -269,13 +304,16 @@ void Client::ProcessSending()
 	std::lock_guard<std::mutex> operationLock(m_operationMutex);
 
 	if ((m_service.m_socketFD.revents & POLLWRNORM) &&
-		(m_service.m_onSendFlag) == true)
+		(m_service.m_sendMessage.m_onProcessFlag) == true)
 	{
 		int bytesSent = 0;
+		int offset = (m_service.m_sendMessage.m_bufferTotalSize -
+					  m_service.m_sendMessage.m_bytesToProcess);
+
 		//SMTH SHOULD BE READ
 		if (m_service.m_socketInfo.first.Send(
-			m_service.m_writeBuffer + (m_service.m_writeBufferTotalSize - m_service.m_bytesToSend),
-			m_service.m_bytesToSend,
+			m_service.m_sendMessage.m_buffer + offset,
+			m_service.m_sendMessage.m_bytesToProcess,
 			bytesSent)
 			== CustomSocket::Result::Success)
 		{
@@ -287,15 +325,25 @@ void Client::ProcessSending()
 			}
 			else
 			{
-				m_service.m_bytesToSend -= bytesSent;
+				m_service.m_sendMessage.m_bytesToProcess -= bytesSent;
 
-				if (m_service.m_bytesToSend <= 0)
+				if (m_service.m_sendMessage.m_bytesToProcess <= 0)
 				{
-					OnSend(m_service.m_writeBuffer, m_service.m_writeBufferTotalSize);
+					int tmp_buffer_size = m_service.m_sendMessage.m_bufferTotalSize;
+					char* tmp_buffer = new char[tmp_buffer_size];
+					memcpy_s(tmp_buffer,
+						tmp_buffer_size,
+						m_service.m_sendMessage.m_buffer,
+						m_service.m_sendMessage.m_bufferTotalSize);
 
-					m_service.m_writeBuffer = nullptr;
-					m_service.m_bytesToSend = 0;
-					m_service.m_onSendFlag = false;
+					m_service.m_sendMessage.m_buffer = nullptr;
+					m_service.m_sendMessage.m_bytesToProcess = 0;
+					m_service.m_sendMessage.m_bufferTotalSize = 0;
+					m_service.m_sendMessage.m_onProcessFlag = false;
+
+					OnSend(tmp_buffer, tmp_buffer_size);
+
+					delete[] tmp_buffer;
 				}
 			}
 		}
@@ -329,6 +377,8 @@ void Client::OnRecieve(char* data, int& bytesRecieved)
 
 	std::cout << "[SERVER]: " << "{ " << bytesRecieved;
 	std::cout << " bytes recieved } { MESSAGE = \"" << data << "\" }" << std::endl;
+
+	SetEvent(m_service.m_onRecieveEvent);
 }
 
 void Client::OnSend(const char* data, int& bytesSent)
@@ -338,4 +388,6 @@ void Client::OnSend(const char* data, int& bytesSent)
 
 	std::cout << "[SERVICE INFO]: " << "{ " << bytesSent;
 	std::cout << " bytes sent } { MESSAGE = \"" << data << "\" }" << std::endl;
+
+	SetEvent(m_service.m_onSendEvent);
 }

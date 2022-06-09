@@ -102,7 +102,6 @@ Server::~Server()
 	CustomSocket::NetworkAPIInitializer::Shutdown();
 }
 
-// MUTEX SAFE
 CustomSocket::Result Server::Run()
 {
 	auto result = CustomSocket::Result::Fail;
@@ -137,7 +136,6 @@ CustomSocket::Result Server::Run()
 	return result;
 }
 
-// MUTEX SAFE
 CustomSocket::Result Server::Stop()
 {
 	{
@@ -177,7 +175,6 @@ CustomSocket::Result Server::Stop()
 	return result;
 }
 
-// MUTEX SAFE
 CustomSocket::Result Server::Recieve(const std::string& ip, const uint16_t port,
 									 void* data, int numberOfBytes)
 {
@@ -192,22 +189,21 @@ CustomSocket::Result Server::Recieve(const std::string& ip, const uint16_t port,
 	if (result == CustomSocket::Result::Success)
 	{
 		//std::lock_guard<std::mutex> operationLock(m_operationMutex);
-		result = (find_iter->second.m_readBuffer == nullptr) ? CustomSocket::Result::Success :
+		result = (find_iter->second.m_recieveMessage.m_buffer == nullptr) ? CustomSocket::Result::Success :
 															   CustomSocket::Result::Fail;
 
 		if (result == CustomSocket::Result::Success)
 		{
-			find_iter->second.m_readBuffer = static_cast<char*>(data);
-			find_iter->second.m_bytesToRecieve = numberOfBytes;
-			find_iter->second.m_readBufferTotalSize = numberOfBytes;
-			find_iter->second.m_onRecieveFlag = true;
+			find_iter->second.m_recieveMessage.m_buffer = static_cast<char*>(data);
+			find_iter->second.m_recieveMessage.m_bytesToProcess = numberOfBytes;
+			find_iter->second.m_recieveMessage.m_bufferTotalSize = numberOfBytes;
+			find_iter->second.m_recieveMessage.m_onProcessFlag = true;
 		}
 	}
 
 	return result;
 }
 
-// MUTEX SAFE
 CustomSocket::Result Server::Send(const std::string& ip, const uint16_t port,
 								  const void* data, int numberOfBytes)
 {
@@ -222,15 +218,15 @@ CustomSocket::Result Server::Send(const std::string& ip, const uint16_t port,
 	{
 		//std::lock_guard<std::mutex> operationLock(m_operationMutex);
 
-		result = (find_iter->second.m_writeBuffer == nullptr) ? CustomSocket::Result::Success :
+		result = (find_iter->second.m_sendMessage.m_buffer == nullptr) ? CustomSocket::Result::Success :
 																CustomSocket::Result::Fail;
 
 		if (result == CustomSocket::Result::Success)
 		{
-			find_iter->second.m_writeBuffer = static_cast<const char*>(data);
-			find_iter->second.m_bytesToSend = numberOfBytes;
-			find_iter->second.m_writeBufferTotalSize = numberOfBytes;
-			find_iter->second.m_onSendFlag = true;
+			find_iter->second.m_sendMessage.m_buffer = static_cast<const char*>(data);
+			find_iter->second.m_sendMessage.m_bytesToProcess = numberOfBytes;
+			find_iter->second.m_sendMessage.m_bufferTotalSize = numberOfBytes;
+			find_iter->second.m_sendMessage.m_onProcessFlag = true;
 		}
 	}
 
@@ -241,8 +237,7 @@ void Server::WaitForConnection()
 {
 	WaitForSingleObject(m_getInfoEvent, INFINITE);
 }
-
-//TRY TO USE USING 
+ 
 Server::CONNECTIONS_LIST Server::GetConnectionList()
 {
 	auto key_selector = [](auto& pair) { return pair.first; };
@@ -256,12 +251,49 @@ Server::CONNECTIONS_LIST Server::GetConnectionList()
 	return result;
 }
 
+CustomSocket::Result Server::WaitClientOnSendEvent(const std::string& ip, 
+												   const uint16_t port)
+{
+	auto result = (m_connections.find(CustomSocket::IPEndpoint(ip, port))
+				   == m_connections.end()) ? CustomSocket::Result::Fail : 
+											 CustomSocket::Result::Success;
+	
+	if (result == CustomSocket::Result::Success)
+	{
+		auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+		WaitForSingleObject(connection.m_onSendEvent, INFINITE);
+		result = (ResetEvent(connection.m_onSendEvent) == TRUE) ? 
+															CustomSocket::Result::Success : 
+															CustomSocket::Result::Fail;
+	}
+
+	return result;
+}
+
+CustomSocket::Result Server::WaitClientOnRecieveEvent(const std::string& ip, 
+												   const uint16_t port)
+{
+	auto result = (m_connections.find(CustomSocket::IPEndpoint(ip, port))
+		== m_connections.end()) ? CustomSocket::Result::Fail :
+		CustomSocket::Result::Success;
+
+	if (result == CustomSocket::Result::Success)
+	{
+		auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+		WaitForSingleObject(connection.m_onRecieveEvent, INFINITE);
+		result = (ResetEvent(connection.m_onRecieveEvent) == TRUE) ?
+			CustomSocket::Result::Success :
+			CustomSocket::Result::Fail;
+	}
+
+	return result;
+}
+
 CustomSocket::IPEndpoint Server::GetServerIPConfig()
 {
 	return m_listeningSocketService.m_socketInfo.second;
 }
 
-// MUTEX SAFE
 CustomSocket::Result Server::Disconnect(const std::string& ip, const uint16_t port)
 {
 	auto portToDisconnect = m_connections.end();
@@ -294,7 +326,6 @@ CustomSocket::Result Server::Disconnect(const std::string& ip, const uint16_t po
 	return result;
 }
 
-// MUTEX SAFE
 CustomSocket::Result Server::Connect() 
 {
 	CustomSocket::Socket newConnection;
@@ -318,8 +349,10 @@ CustomSocket::Result Server::Connect()
 			ConnectionService newConnectionService({
 				CONNECTION_INFO(std::move(newConnection), newConnectionEndpoint),
 				{ INVALID_SOCKET, (POLLRDNORM | POLLWRNORM), 0},
-				nullptr, 0, 0, false,
-				nullptr, 0, 0, false
+				{nullptr, 0, 0, false},
+				CreateEvent(nullptr, TRUE, FALSE, L"OnSendEvent"),
+				{nullptr, 0, 0, false},
+				CreateEvent(nullptr, TRUE, FALSE, L"OnRecieveEvent")
 				});
 
 
@@ -406,13 +439,15 @@ void Server::RecieveProcessing(const std::string& ip, const uint16_t port)
 {
 	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
 
-	if (connection.m_onRecieveFlag == true)
+	if (connection.m_recieveMessage.m_onProcessFlag == true)
 	{
 		int bytesRecieved = 0;
+		auto offset = (connection.m_recieveMessage.m_bufferTotalSize -
+					   connection.m_recieveMessage.m_bytesToProcess);
 
 		if (connection.m_socketInfo.first.Recieve(
-			connection.m_readBuffer + (connection.m_readBufferTotalSize - connection.m_bytesToRecieve),
-			connection.m_bytesToRecieve,
+			connection.m_recieveMessage.m_buffer + offset,
+			connection.m_recieveMessage.m_bytesToProcess,
 			bytesRecieved)
 			== CustomSocket::Result::Success)
 		{
@@ -421,19 +456,32 @@ void Server::RecieveProcessing(const std::string& ip, const uint16_t port)
 				//CLIENT WAS DISCONNECTED
 
 				Disconnect(connection.m_socketInfo.second.GetIPString(),
-					connection.m_socketInfo.second.GetPort());
+						   connection.m_socketInfo.second.GetPort());
 			}
 			else
 			{
-				connection.m_bytesToRecieve -= bytesRecieved;
+				connection.m_recieveMessage.m_bytesToProcess -= bytesRecieved;
 
-				if (connection.m_bytesToRecieve <= 0)
+				if (connection.m_recieveMessage.m_bytesToProcess <= 0)
 				{
-					OnRecieve(ip, port, connection.m_readBuffer, connection.m_readBufferTotalSize);
+					int tmp_buffer_size = connection.m_recieveMessage.m_bufferTotalSize;
+					char* tmp_buffer = new char[tmp_buffer_size];
+					memcpy_s(tmp_buffer,
+							 tmp_buffer_size,
+							 connection.m_recieveMessage.m_buffer,
+							 connection.m_recieveMessage.m_bufferTotalSize);
 
-					connection.m_readBuffer = nullptr;
-					connection.m_bytesToRecieve = 0;
-					connection.m_onRecieveFlag = false;
+					connection.m_recieveMessage.m_buffer = nullptr;
+					connection.m_recieveMessage.m_bytesToProcess = 0;
+					connection.m_recieveMessage.m_bufferTotalSize = 0;
+					connection.m_recieveMessage.m_onProcessFlag = false;
+
+					OnRecieve(ip, 
+							  port, 
+							  tmp_buffer,
+							  tmp_buffer_size);
+
+					delete[] tmp_buffer;
 				}
 			}
 		}
@@ -444,13 +492,15 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 {
 	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
 
-	if (connection.m_onSendFlag == true)
+	if (connection.m_sendMessage.m_onProcessFlag == true)
 	{
 		int bytesSent = 0;
+		auto offset = (connection.m_sendMessage.m_bufferTotalSize -
+					   connection.m_sendMessage.m_bytesToProcess);
 
 		if (connection.m_socketInfo.first.Send(
-			connection.m_writeBuffer + (connection.m_writeBufferTotalSize - connection.m_bytesToSend),
-			connection.m_bytesToSend, 
+			connection.m_sendMessage.m_buffer + offset,
+			connection.m_sendMessage.m_bytesToProcess,
 			bytesSent)
 			== CustomSocket::Result::Success)
 		{
@@ -459,19 +509,33 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 				//CLIENT WAS DISCONNECTED
 
 				Disconnect(connection.m_socketInfo.second.GetIPString(),
-					connection.m_socketInfo.second.GetPort());
+						   connection.m_socketInfo.second.GetPort());
 			}
 			else
 			{
-				connection.m_bytesToSend -= bytesSent;
+				connection.m_sendMessage.m_bytesToProcess -= bytesSent;
 
-				if (connection.m_bytesToSend <= 0)
+				if (connection.m_sendMessage.m_bytesToProcess <= 0)
 				{
-					OnSend(ip, port, connection.m_writeBuffer, connection.m_writeBufferTotalSize);
+					int tmp_buffer_size = connection.m_sendMessage.m_bufferTotalSize;
+					char* tmp_buffer = new char[tmp_buffer_size];
+					memcpy_s(tmp_buffer,
+							 tmp_buffer_size,
+							 connection.m_sendMessage.m_buffer,
+							 connection.m_sendMessage.m_bufferTotalSize);
 
-					connection.m_writeBuffer = nullptr;
-					connection.m_bytesToSend = 0;
-					connection.m_onSendFlag = false;
+					connection.m_sendMessage.m_buffer = nullptr;
+					connection.m_sendMessage.m_bytesToProcess = 0;
+					connection.m_sendMessage.m_bufferTotalSize = 0;
+					connection.m_sendMessage.m_onProcessFlag = false;
+
+					OnSend(ip, 
+						   port, 
+						   tmp_buffer,
+						   tmp_buffer_size);
+
+					delete[] tmp_buffer;
+					//SetEvent(connection.m_onSendEvent);
 				}
 			}
 		}
@@ -488,6 +552,19 @@ void Server::OnSend(const std::string& ip, const uint16_t port, const char* data
 	std::cout << " bytes sent to port ";
 	std::cout << static_cast<int>(port);
 	std::cout << "} { MESSAGE = \"" << data << "\" }" << std::endl;
+
+	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+	/**
+	if (SetEvent(connection.m_onSendEvent))
+	{
+		std::cout << "ejrgnaeingrijnaeirgnhiquhgpiuqhiughq3p4or" << std::endl;
+	}
+	else
+	{
+		std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << std::endl;
+	}
+	**/
+	SetEvent(connection.m_onSendEvent);
 }
 
 void Server::OnRecieve(const std::string& ip, const uint16_t port, char* data, int& bytesRecieved)
@@ -501,6 +578,8 @@ void Server::OnRecieve(const std::string& ip, const uint16_t port, char* data, i
 	std::cout << static_cast<int>(port) << "} ";
 	std::cout << "{ MESSAGE = \"" << data << "\" } " << std::endl;
 
+	auto& connection = m_connections.find(CustomSocket::IPEndpoint(ip, port))->second;
+	SetEvent(connection.m_onRecieveEvent);
 }
 
 void Server::OnConnect(const std::string& ip, const uint16_t port)

@@ -223,7 +223,13 @@ CustomSocket::Result Server::Send(const std::string& ip, const uint16_t port,
 
 		if (result == CustomSocket::Result::Success)
 		{
-			find_iter->second.m_sendMessage.m_buffer = static_cast<const char*>(data);
+			//find_iter->second.m_sendMessage.m_buffer = static_cast<const char*>(data);
+			find_iter->second.m_sendMessage.m_buffer = new char[numberOfBytes];
+			memcpy_s(const_cast<char*>(find_iter->second.m_sendMessage.m_buffer),
+					 numberOfBytes,
+					 data,
+					 numberOfBytes);
+			
 			find_iter->second.m_sendMessage.m_bytesToProcess = numberOfBytes;
 			find_iter->second.m_sendMessage.m_bufferTotalSize = numberOfBytes;
 			find_iter->second.m_sendMessage.m_onProcessFlag = true;
@@ -524,7 +530,9 @@ void Server::SendProcessing(const std::string& ip, const uint16_t port)
 							 connection.m_sendMessage.m_buffer,
 							 connection.m_sendMessage.m_bufferTotalSize);
 
+					delete[] connection.m_sendMessage.m_buffer;
 					connection.m_sendMessage.m_buffer = nullptr;
+
 					connection.m_sendMessage.m_bytesToProcess = 0;
 					connection.m_sendMessage.m_bufferTotalSize = 0;
 					connection.m_sendMessage.m_onProcessFlag = false;

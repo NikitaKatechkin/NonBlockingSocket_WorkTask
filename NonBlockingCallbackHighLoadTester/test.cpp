@@ -3,6 +3,15 @@
 #include <NonBlockingCallbackServer/CalbackServer.h>
 #include <NonBlockingCallbackClient/CallbackClient.h>
 
+#include <boost/crc.hpp>
+#include <cstdlib>
+#include <ctime>
+
+namespace TestToolkit
+{
+	void GetRandomString(char* string, unsigned int length);
+}
+
 /**
 TEST(HighLoadTestCase, AsynchServerSend) 
 {
@@ -489,14 +498,19 @@ TEST(HighLoadTestCase, FullyAsynchServerToClientSend)
 
 	///**
 	const int bufSize = 4096;
-	const char* serverMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* serverMessage = new char[bufSize];
 
 	int bytesToRecieve = bufSize;
 	char* clientBuffer = new char[bytesToRecieve] {};
 
 	for (size_t index = 0; index < 1024; index++)
 	{
+		//--------------------------------------------------------------------
+		// Creating random string
+		TestToolkit::GetRandomString(serverMessage, bufSize);
+
+		//--------------------------------------------------------------------
+		// Send string
 		EXPECT_EQ(server.Send(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
 			serverMessage, bufSize), CustomSocket::Result::Success);
 
@@ -504,9 +518,23 @@ TEST(HighLoadTestCase, FullyAsynchServerToClientSend)
 			clientIPConfig.GetPort()),
 			CustomSocket::Result::Success);
 
+		//--------------------------------------------------------------------
+		// Recieve string
 		EXPECT_EQ(client.Recieve(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
 
 		EXPECT_EQ(client.WaitOnRecieveEvent(), CustomSocket::Result::Success);
+
+		//--------------------------------------------------------------------
+		// Creating checksum
+		boost::crc_32_type serverMessageCheckSum;
+		serverMessageCheckSum.process_bytes(serverMessage, bufSize);
+
+		boost::crc_32_type clientBufferCheckSum;
+		clientBufferCheckSum.process_bytes(clientBuffer, bufSize);
+
+		//--------------------------------------------------------------------
+		// Checking checksum
+		EXPECT_EQ(clientBufferCheckSum.checksum(), serverMessageCheckSum.checksum());
 	}
 	//**/
 
@@ -539,20 +567,39 @@ TEST(HighLoadTestCase, FullyAsynchServerFromClientRecieve)
 	char* serverBuffer = new char[bufSize] {};
 
 	int bytesToSend = bufSize;
-	const char* clientMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* clientMessage = new char[bufSize];
 
 	for (size_t index = 0; index < 1024; index++)
 	{
+		//--------------------------------------------------------------------
+		// Creating random string
+		TestToolkit::GetRandomString(clientMessage, bufSize);
+
+		//--------------------------------------------------------------------
+		// Send string
 		EXPECT_EQ(client.Send(clientMessage, bufSize),
 			CustomSocket::Result::Success);
 		EXPECT_EQ(client.WaitOnSendEvent(), CustomSocket::Result::Success);
 
+		//--------------------------------------------------------------------
+		// Recieve string
 		EXPECT_EQ(server.Recieve(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
 			serverBuffer, bufSize), CustomSocket::Result::Success);
 		EXPECT_EQ(server.WaitClientOnRecieveEvent(clientIPConfig.GetIPString(),
 			clientIPConfig.GetPort()),
 			CustomSocket::Result::Success);
+
+		//--------------------------------------------------------------------
+		// Creating checksum
+		boost::crc_32_type serverBufferCheckSum;
+		serverBufferCheckSum.process_bytes(serverBuffer, bufSize);
+
+		boost::crc_32_type clientMessageCheckSum;
+		clientMessageCheckSum.process_bytes(clientMessage, bufSize);
+
+		//--------------------------------------------------------------------
+		// Checking checksum
+		EXPECT_EQ(clientMessageCheckSum.checksum(), serverBufferCheckSum.checksum());
 	}
 	//**/
 
@@ -563,4 +610,22 @@ int main(int argc, char* argv[])
 {
 	::testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
+}
+
+namespace TestToolkit
+{
+	void GetRandomString(char* string, unsigned int length)
+	{
+		std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
+		const std::string alphabet = (std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + 
+									  std::string("abcdefghijklmnopqrstuvwxyz") + 
+									  std::string("0123456789") + std::string("!@#$%^&*()_+=-"));
+
+		for (size_t index = 0; index < length; index++)
+		{
+			auto randomCharIndex = rand() % alphabet.size();
+			string[index] = alphabet[randomCharIndex];
+		}
+	}
 }

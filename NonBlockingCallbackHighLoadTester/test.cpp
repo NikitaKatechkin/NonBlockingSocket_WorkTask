@@ -14,16 +14,17 @@ namespace TestToolkit
 	void GetRandomString(char* string, unsigned int length);
 }
 
-/**
 TEST(HighLoadTestCase, AsynchServerSend) 
 {
+	//---------------------RUNNING SERVER---------------------------------//
+
 	CallbackServer server;
 
 	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
 
 	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
 
-	//-------------------------------------------------------------------
+	//----------------------RUNNING CLIENT--------------------------------//
 
 	CustomSocket::Socket client;
 
@@ -33,50 +34,73 @@ TEST(HighLoadTestCase, AsynchServerSend)
 	CustomSocket::IPEndpoint clientIPConfig;
 	EXPECT_EQ(client.GetSocketInfo(clientIPConfig), CustomSocket::Result::Success);
 
-	//--------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
 
 	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
 	server.WaitForConnection();
 
 	EXPECT_EQ(server.GetConnectionList(), std::vector<CustomSocket::IPEndpoint> { clientIPConfig });
 
-	//--------------------------------------------------------------------
+	//----------------------SENDING MESSAGES------------------------------//
 
 	const int bufSize = 4096;
-	const char* serverMessage = new char[bufSize] 
-										{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* serverMessage = new char[bufSize];
 
 	int bytesToRecieve = bufSize;
 	char* clientBuffer = new char[bytesToRecieve] {};
 
 	for (size_t index = 0; index < 1024; index++)
 	{
+		//--------------------PREPARE SENDING MESSAGE---------------------//
+
+		TestToolkit::GetRandomString(serverMessage, bufSize);
+
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(server.Send(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
 					serverMessage, bufSize), CustomSocket::Result::Success);
+		EXPECT_EQ(server.WaitClientOnSendEvent(clientIPConfig.GetIPString(),
+			clientIPConfig.GetPort()),
+			CustomSocket::Result::Success);
 
 		EXPECT_EQ(client.RecieveAll(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
 
-		EXPECT_EQ(server.WaitClientOnSendEvent(clientIPConfig.GetIPString(), 
-											   clientIPConfig.GetPort()), 
-				  CustomSocket::Result::Success);
+		//--------------------PREPARING CHECKSUM--------------------------//
+
+		boost::crc_32_type serverMessageCheckSum;
+		serverMessageCheckSum.process_bytes(serverMessage, bufSize);
+
+		boost::crc_32_type clientBufferCheckSum;
+		clientBufferCheckSum.process_bytes(clientBuffer, bufSize);
+
+		//--------------------CHECKING CHECKSUM---------------------------//
+
+		EXPECT_EQ(clientBufferCheckSum.checksum(), serverMessageCheckSum.checksum());
 
 	}
 
-	//--------------------------------------------------------------------
+	//----------------------CLOSING AGENTS--------------------------------//
 
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
+
+	//----------------------CLEARING HEAP---------------------------------//
+
+	delete[] serverMessage;
+	delete[] clientBuffer;
 }
 
 TEST(HighLoadTestCase, AsynchServerRecieve)
 {
+	//---------------------RUNNING SERVER---------------------------------//
+
 	CallbackServer server;
 
 	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
 
 	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
 
-	//-------------------------------------------------------------------
+	//----------------------RUNNING CLIENT--------------------------------//
 
 	CustomSocket::Socket client;
 
@@ -86,49 +110,71 @@ TEST(HighLoadTestCase, AsynchServerRecieve)
 	CustomSocket::IPEndpoint clientIPConfig;
 	EXPECT_EQ(client.GetSocketInfo(clientIPConfig), CustomSocket::Result::Success);
 
-	//--------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
 
 	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
 	server.WaitForConnection();
 
 	EXPECT_EQ(server.GetConnectionList(), std::vector<CustomSocket::IPEndpoint> { clientIPConfig });
 
-	//--------------------------------------------------------------------
+	//----------------------RECIEVING MESSAGES----------------------------//
 
 	const int bufSize = 4096;
 	char* serverBuffer = new char[bufSize] {};
 
 	int bytesToSend = bufSize;
-	const char* clientMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
-
+	char* clientMessage = new char[bufSize];
 
 	for (size_t index = 0; index < 1024; index++)
 	{
+		//--------------------PREPARE SENDING MESSAGE---------------------//
+
+		TestToolkit::GetRandomString(clientMessage, bufSize);
+
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(client.SendAll(clientMessage, bytesToSend),
 			CustomSocket::Result::Success);
 
 		EXPECT_EQ(server.Recieve(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
-								 serverBuffer, bufSize), CustomSocket::Result::Success);
-
+								 serverBuffer, bufSize), 
+				  CustomSocket::Result::Success);
 		EXPECT_EQ(server.WaitClientOnRecieveEvent(clientIPConfig.GetIPString(),
 												  clientIPConfig.GetPort()),
 				  CustomSocket::Result::Success);
+
+		//--------------------PREPARING CHECKSUM--------------------------//
+
+		boost::crc_32_type serverBufferCheckSum;
+		serverBufferCheckSum.process_bytes(serverBuffer, bufSize);
+
+		boost::crc_32_type clientMessageCheckSum;
+		clientMessageCheckSum.process_bytes(clientMessage, bufSize);
+
+		//--------------------CHECKING CHECKSUM---------------------------//
+
+		EXPECT_EQ(clientMessageCheckSum.checksum(), serverBufferCheckSum.checksum());
 	}
 
-	//--------------------------------------------------------------------
+	//----------------------CLOSING AGENTS--------------------------------//
 
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
+
+	//----------------------CLEARING HEAP---------------------------------//
+
+	delete[] serverBuffer;
+	delete[] clientMessage;
 }
 
 TEST(HighLoadTestCase, AsynchClientSend)
 {
-	CallbackClient client;
+	//----------------------RUNNING CLIENT--------------------------------//
 
+	CallbackClient client;
 	CustomSocket::IPEndpoint clientIPConfig = client.GetClientIPConfig();
 
-	//-------------------------------------------------------------------
+	//---------------------RUNNING SERVER---------------------------------//
 
 	CustomSocket::Socket server;
 
@@ -139,7 +185,7 @@ TEST(HighLoadTestCase, AsynchClientSend)
 	CustomSocket::IPEndpoint serverIPConfig;
 	EXPECT_EQ(server.GetSocketInfo(serverIPConfig), CustomSocket::Result::Success);
 
-	//--------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
 
 	CustomSocket::Socket newConnectionSocket;
 
@@ -153,40 +199,61 @@ TEST(HighLoadTestCase, AsynchClientSend)
 	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
 	serverThread.join();
 
-	
-	//--------------------------------------------------------------------
+	//----------------------SENDING MESSAGES------------------------------//
 
 	const int bufSize = 4096;
-	const char* clientMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* clientMessage = new char[bufSize];
 
 	int bytesToRecv = bufSize;
 	char* serverBuffer = new char[bufSize] {};
 
 	for (size_t index = 0; index < 1024; index++)
 	{
+		//--------------------PREPARE SENDING MESSAGE---------------------//	
+
+		TestToolkit::GetRandomString(clientMessage, bufSize);
+
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(client.Send(clientMessage, bufSize),
 				  CustomSocket::Result::Success);
+		EXPECT_EQ(client.WaitOnSendEvent(), CustomSocket::Result::Success);
 
 		EXPECT_EQ(newConnectionSocket.RecieveAll(serverBuffer, bytesToRecv),
 				  CustomSocket::Result::Success);
 
-		EXPECT_EQ(client.WaitOnSendEvent(), CustomSocket::Result::Success);
+		//--------------------PREPARING CHECKSUM--------------------------//
+
+		boost::crc_32_type serverBufferCheckSum;
+		serverBufferCheckSum.process_bytes(serverBuffer, bufSize);
+
+		boost::crc_32_type clientMessageCheckSum;
+		clientMessageCheckSum.process_bytes(clientMessage, bufSize);
+
+		//--------------------CHECKING CHECKSUM---------------------------//
+
+		EXPECT_EQ(clientMessageCheckSum.checksum(), serverBufferCheckSum.checksum());
 	}
 
-	//--------------------------------------------------------------------
+	//----------------------CLOSING AGENTS--------------------------------//
 	
 	EXPECT_EQ(newConnectionSocket.Close(), CustomSocket::Result::Success);
 	EXPECT_EQ(server.Close(), CustomSocket::Result::Success);
+
+	//----------------------CLEARING HEAP---------------------------------//
+
+	delete[] serverBuffer;
+	delete[] clientMessage;
 }
 
 TEST(HighLoadTestCase, AsynchClientRecieve)
 {
-	CallbackClient client;
+	//----------------------RUNNING CLIENT--------------------------------//
 
+	CallbackClient client;
 	CustomSocket::IPEndpoint clientIPConfig = client.GetClientIPConfig();
 
-	//-------------------------------------------------------------------
+	//---------------------RUNNING SERVER---------------------------------//
 
 	CustomSocket::Socket server;
 
@@ -197,7 +264,7 @@ TEST(HighLoadTestCase, AsynchClientRecieve)
 	CustomSocket::IPEndpoint serverIPConfig;
 	EXPECT_EQ(server.GetSocketInfo(serverIPConfig), CustomSocket::Result::Success);
 
-	//--------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
 
 	CustomSocket::Socket newConnectionSocket;
 
@@ -212,43 +279,66 @@ TEST(HighLoadTestCase, AsynchClientRecieve)
 	serverThread.join();
 
 
-	//--------------------------------------------------------------------
+	//----------------------RECIEVING MESSAGES----------------------------//
 
 	const int bufSize = 4096;
 
 	int bytesToSend = bufSize;
-	const char* serverMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* serverMessage = new char[bufSize];
 
 	int bytesToRecv = bufSize;
 	char* clientBuffer = new char[bytesToRecv] {};
 
 	for (size_t index = 0; index < 1024; index++)
 	{
+		//--------------------PREPARE SENDING MESSAGE---------------------//	
+
+		TestToolkit::GetRandomString(serverMessage, bufSize);
+
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(newConnectionSocket.SendAll(serverMessage, bytesToSend),
 			CustomSocket::Result::Success);
 
 		EXPECT_EQ(client.Recieve(clientBuffer, bytesToRecv),
 				  CustomSocket::Result::Success);
-
 		EXPECT_EQ(client.WaitOnRecieveEvent(), CustomSocket::Result::Success);
+
+		//--------------------PREPARING CHECKSUM--------------------------//
+
+		boost::crc_32_type serverMessageCheckSum;
+		serverMessageCheckSum.process_bytes(serverMessage, bufSize);
+
+		boost::crc_32_type clientBufferCheckSum;
+		clientBufferCheckSum.process_bytes(clientBuffer, bufSize);
+
+		//--------------------CHECKING CHECKSUM---------------------------//
+
+		EXPECT_EQ(clientBufferCheckSum.checksum(), serverMessageCheckSum.checksum());
 	}
 
-	//--------------------------------------------------------------------
+	//----------------------CLOSING AGENTS--------------------------------//
 
 	EXPECT_EQ(newConnectionSocket.Close(), CustomSocket::Result::Success);
 	EXPECT_EQ(server.Close(), CustomSocket::Result::Success);
+
+	//----------------------CLEARING HEAP---------------------------------//
+
+	delete[] serverMessage;
+	delete[] clientBuffer;
 }
 
 TEST(HighLoadTestCase, AsynchServerSendBigOne)
 {
+	//---------------------RUNNING SERVER---------------------------------//
+
 	CallbackServer server;
 
 	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
 
 	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
 
-	//-------------------------------------------------------------------
+	//----------------------RUNNING CLIENT--------------------------------//
 
 	CustomSocket::Socket client;
 
@@ -258,38 +348,56 @@ TEST(HighLoadTestCase, AsynchServerSendBigOne)
 	CustomSocket::IPEndpoint clientIPConfig;
 	EXPECT_EQ(client.GetSocketInfo(clientIPConfig), CustomSocket::Result::Success);
 
-	//--------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
 
 	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
 	server.WaitForConnection();
 
 	EXPECT_EQ(server.GetConnectionList(), std::vector<CustomSocket::IPEndpoint> { clientIPConfig });
 
-	//--------------------------------------------------------------------
+	//----------------------SENDING MESSAGES------------------------------//
 
 	const int bufSize = 4096 * 1024;
-	const char* serverMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* serverMessage = new char[bufSize];
 
 	int bytesToRecieve = bufSize;
 	char* clientBuffer = new char[bytesToRecieve] {};
 
 	for (size_t index = 0; index < 1; index++)
 	{
+		//--------------------PREPARE SENDING MESSAGE---------------------//
+
+		TestToolkit::GetRandomString(serverMessage, bufSize);
+
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(server.Send(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
 			serverMessage, bufSize), CustomSocket::Result::Success);
-
-		EXPECT_EQ(client.RecieveAll(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
-
 		EXPECT_EQ(server.WaitClientOnSendEvent(clientIPConfig.GetIPString(),
 			clientIPConfig.GetPort()),
 			CustomSocket::Result::Success);
+
+		EXPECT_EQ(client.RecieveAll(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
+
+		//--------------------PREPARING CHECKSUM--------------------------//
+
+		boost::crc_32_type serverMessageCheckSum;
+		serverMessageCheckSum.process_bytes(serverMessage, bufSize);
+
+		boost::crc_32_type clientBufferCheckSum;
+		clientBufferCheckSum.process_bytes(clientBuffer, bufSize);
+
+		//--------------------CHECKING CHECKSUM---------------------------//
+
+		EXPECT_EQ(clientBufferCheckSum.checksum(), serverMessageCheckSum.checksum());
 	}
 
-	//--------------------------------------------------------------------
+	//----------------------CLOSING AGENTS--------------------------------//
 
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
+
+	//----------------------CLEARING HEAP---------------------------------//
 
 	delete[] serverMessage;
 	delete[] clientBuffer;
@@ -297,13 +405,15 @@ TEST(HighLoadTestCase, AsynchServerSendBigOne)
 
 TEST(HighLoadTestCase, AsynchServerRecieveBigOne)
 {
+	//---------------------RUNNING SERVER---------------------------------//
+
 	CallbackServer server;
 
 	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
 
 	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
 
-	//-------------------------------------------------------------------
+	//----------------------RUNNING CLIENT--------------------------------//
 
 	CustomSocket::Socket client;
 
@@ -313,40 +423,59 @@ TEST(HighLoadTestCase, AsynchServerRecieveBigOne)
 	CustomSocket::IPEndpoint clientIPConfig;
 	EXPECT_EQ(client.GetSocketInfo(clientIPConfig), CustomSocket::Result::Success);
 
-	//--------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
 
 	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
 	server.WaitForConnection();
 
 	EXPECT_EQ(server.GetConnectionList(), std::vector<CustomSocket::IPEndpoint> { clientIPConfig });
 
-	//--------------------------------------------------------------------
+	//----------------------RECIEVING MESSAGES----------------------------//
 
 	const int bufSize = 4096 * 1024;
 	char* serverBuffer = new char[bufSize] {};
 
 	int bytesToSend = bufSize;
-	const char* clientMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* clientMessage = new char[bufSize];
 
 
 	for (size_t index = 0; index < 1; index++)
 	{
+		//--------------------PREPARE SENDING MESSAGE---------------------//
+
+		TestToolkit::GetRandomString(clientMessage, bufSize);
+
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(client.SendAll(clientMessage, bytesToSend),
 			CustomSocket::Result::Success);
 
 		EXPECT_EQ(server.Recieve(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
-			serverBuffer, bufSize), CustomSocket::Result::Success);
-
+			serverBuffer, bufSize),
+			CustomSocket::Result::Success);
 		EXPECT_EQ(server.WaitClientOnRecieveEvent(clientIPConfig.GetIPString(),
 			clientIPConfig.GetPort()),
 			CustomSocket::Result::Success);
+
+		//--------------------PREPARING CHECKSUM--------------------------//
+
+		boost::crc_32_type serverBufferCheckSum;
+		serverBufferCheckSum.process_bytes(serverBuffer, bufSize);
+
+		boost::crc_32_type clientMessageCheckSum;
+		clientMessageCheckSum.process_bytes(clientMessage, bufSize);
+
+		//--------------------CHECKING CHECKSUM---------------------------//
+
+		EXPECT_EQ(clientMessageCheckSum.checksum(), serverBufferCheckSum.checksum());
 	}
 
-	//--------------------------------------------------------------------
+	//----------------------CLOSING AGENTS--------------------------------//
 
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
+
+	//----------------------CLEARING HEAP---------------------------------//
 
 	delete[] serverBuffer;
 	delete[] clientMessage;
@@ -354,11 +483,12 @@ TEST(HighLoadTestCase, AsynchServerRecieveBigOne)
 
 TEST(HighLoadTestCase, AsynchClientSendBigOne)
 {
-	CallbackClient client;
+	//----------------------RUNNING CLIENT--------------------------------//
 
+	CallbackClient client;
 	CustomSocket::IPEndpoint clientIPConfig = client.GetClientIPConfig();
 
-	//-------------------------------------------------------------------
+	//---------------------RUNNING SERVER---------------------------------//
 
 	CustomSocket::Socket server;
 
@@ -369,7 +499,7 @@ TEST(HighLoadTestCase, AsynchClientSendBigOne)
 	CustomSocket::IPEndpoint serverIPConfig;
 	EXPECT_EQ(server.GetSocketInfo(serverIPConfig), CustomSocket::Result::Success);
 
-	//--------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
 
 	CustomSocket::Socket newConnectionSocket;
 
@@ -383,31 +513,48 @@ TEST(HighLoadTestCase, AsynchClientSendBigOne)
 	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
 	serverThread.join();
 
-
-	//--------------------------------------------------------------------
+	//----------------------SENDING MESSAGES------------------------------//
 
 	const int bufSize = 4096 * 1024;
-	const char* clientMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* clientMessage = new char[bufSize];
 
 	int bytesToRecv = bufSize;
 	char* serverBuffer = new char[bufSize] {};
 
 	for (size_t index = 0; index < 1; index++)
 	{
+		//--------------------PREPARE SENDING MESSAGE---------------------//	
+
+		TestToolkit::GetRandomString(clientMessage, bufSize);
+
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(client.Send(clientMessage, bufSize),
 			CustomSocket::Result::Success);
+		EXPECT_EQ(client.WaitOnSendEvent(), CustomSocket::Result::Success);
 
 		EXPECT_EQ(newConnectionSocket.RecieveAll(serverBuffer, bytesToRecv),
 			CustomSocket::Result::Success);
 
-		EXPECT_EQ(client.WaitOnSendEvent(), CustomSocket::Result::Success);
+		//--------------------PREPARING CHECKSUM--------------------------//
+
+		boost::crc_32_type serverBufferCheckSum;
+		serverBufferCheckSum.process_bytes(serverBuffer, bufSize);
+
+		boost::crc_32_type clientMessageCheckSum;
+		clientMessageCheckSum.process_bytes(clientMessage, bufSize);
+
+		//--------------------CHECKING CHECKSUM---------------------------//
+
+		EXPECT_EQ(clientMessageCheckSum.checksum(), serverBufferCheckSum.checksum());
 	}
 
-	//--------------------------------------------------------------------
+	//----------------------CLOSING AGENTS--------------------------------//
 
 	EXPECT_EQ(newConnectionSocket.Close(), CustomSocket::Result::Success);
 	EXPECT_EQ(server.Close(), CustomSocket::Result::Success);
+
+	//----------------------CLEARING HEAP---------------------------------//
 
 	delete[] serverBuffer;
 	delete[] clientMessage;
@@ -415,11 +562,12 @@ TEST(HighLoadTestCase, AsynchClientSendBigOne)
 
 TEST(HighLoadTestCase, AsynchClientRecieveBigOne)
 {
-	CallbackClient client;
+	//----------------------RUNNING CLIENT--------------------------------//
 
+	CallbackClient client;
 	CustomSocket::IPEndpoint clientIPConfig = client.GetClientIPConfig();
 
-	//-------------------------------------------------------------------
+	//---------------------RUNNING SERVER---------------------------------//
 
 	CustomSocket::Socket server;
 
@@ -430,7 +578,7 @@ TEST(HighLoadTestCase, AsynchClientRecieveBigOne)
 	CustomSocket::IPEndpoint serverIPConfig;
 	EXPECT_EQ(server.GetSocketInfo(serverIPConfig), CustomSocket::Result::Success);
 
-	//--------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
 
 	CustomSocket::Socket newConnectionSocket;
 
@@ -445,60 +593,78 @@ TEST(HighLoadTestCase, AsynchClientRecieveBigOne)
 	serverThread.join();
 
 
-	//--------------------------------------------------------------------
+	//----------------------RECIEVING MESSAGES----------------------------//
 
 	const int bufSize = 4096 * 1024;
 
 	int bytesToSend = bufSize;
-	const char* serverMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* serverMessage = new char[bufSize];
 
 	int bytesToRecv = bufSize;
 	char* clientBuffer = new char[bytesToRecv] {};
 
 	for (size_t index = 0; index < 1; index++)
 	{
+		//--------------------PREPARE SENDING MESSAGE---------------------//	
+
+		TestToolkit::GetRandomString(serverMessage, bufSize);
+
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(newConnectionSocket.SendAll(serverMessage, bytesToSend),
 			CustomSocket::Result::Success);
 
 		EXPECT_EQ(client.Recieve(clientBuffer, bytesToRecv),
 			CustomSocket::Result::Success);
-
 		EXPECT_EQ(client.WaitOnRecieveEvent(), CustomSocket::Result::Success);
+
+		//--------------------PREPARING CHECKSUM--------------------------//
+
+		boost::crc_32_type serverMessageCheckSum;
+		serverMessageCheckSum.process_bytes(serverMessage, bufSize);
+
+		boost::crc_32_type clientBufferCheckSum;
+		clientBufferCheckSum.process_bytes(clientBuffer, bufSize);
+
+		//--------------------CHECKING CHECKSUM---------------------------//
+
+		EXPECT_EQ(clientBufferCheckSum.checksum(), serverMessageCheckSum.checksum());
 	}
 
-	//--------------------------------------------------------------------
+	//----------------------CLOSING AGENTS--------------------------------//
 
 	EXPECT_EQ(newConnectionSocket.Close(), CustomSocket::Result::Success);
 	EXPECT_EQ(server.Close(), CustomSocket::Result::Success);
 
+	//----------------------CLEARING HEAP---------------------------------//
+
 	delete[] serverMessage;
 	delete[] clientBuffer;
 }
-**/
 
 TEST(HighLoadTestCase, FullyAsynchServerToClientSend)
 {
+	//---------------------RUNNING SERVER---------------------------------//
+
 	CallbackServer server;
 
 	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
 
 	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
 
-	//-------------------------------------------------------------------
+	//----------------------RUNNING CLIENT--------------------------------//
 
 	CallbackClient client;
-
 	CustomSocket::IPEndpoint clientIPConfig = client.GetClientIPConfig();
 
-	//-------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
+
 
 	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-	//--------------------------------------------------------------------
+	//----------------------SENDING MESSAGES------------------------------//
 
-	///**
 	const int bufSize = 4096;
 	char* serverMessage = new char[bufSize];
 
@@ -507,64 +673,64 @@ TEST(HighLoadTestCase, FullyAsynchServerToClientSend)
 
 	for (size_t index = 0; index < 1024; index++)
 	{
-		//--------------------------------------------------------------------
-		// Creating random string
+		//--------------------PREPARE SENDING MESSAGE---------------------//
+
 		TestToolkit::GetRandomString(serverMessage, bufSize);
 
-		//--------------------------------------------------------------------
-		// Send string
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(server.Send(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
-			serverMessage, bufSize), CustomSocket::Result::Success);
-
+							  serverMessage, bufSize), 
+				  CustomSocket::Result::Success);
 		EXPECT_EQ(server.WaitClientOnSendEvent(clientIPConfig.GetIPString(),
-			clientIPConfig.GetPort()),
-			CustomSocket::Result::Success);
+											   clientIPConfig.GetPort()),
+				  CustomSocket::Result::Success);
 
-		//--------------------------------------------------------------------
-		// Recieve string
 		EXPECT_EQ(client.Recieve(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
-
 		EXPECT_EQ(client.WaitOnRecieveEvent(), CustomSocket::Result::Success);
 
-		//--------------------------------------------------------------------
-		// Creating checksum
+		//--------------------PREPARING CHECKSUM--------------------------//
+
 		boost::crc_32_type serverMessageCheckSum;
 		serverMessageCheckSum.process_bytes(serverMessage, bufSize);
 
 		boost::crc_32_type clientBufferCheckSum;
 		clientBufferCheckSum.process_bytes(clientBuffer, bufSize);
 
-		//--------------------------------------------------------------------
-		// Checking checksum
+		//--------------------CHECKING CHECKSUM---------------------------//
+
 		EXPECT_EQ(clientBufferCheckSum.checksum(), serverMessageCheckSum.checksum());
 	}
-	//**/
 
-	//--------------------------------------------------------------------
+	//----------------------CLEARING HEAP---------------------------------//
+
+	delete[] serverMessage;
+	delete[] clientBuffer;
 }
 
 TEST(HighLoadTestCase, FullyAsynchServerFromClientRecieve)
 {
+	//---------------------RUNNING SERVER---------------------------------//
+
 	CallbackServer server;
 
 	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
 
 	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
 
-	//-------------------------------------------------------------------
+	//----------------------RUNNING CLIENT--------------------------------//
 
 	CallbackClient client;
-
 	CustomSocket::IPEndpoint clientIPConfig = client.GetClientIPConfig();
 
-	//-------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
+
 
 	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-	//--------------------------------------------------------------------
+	//----------------------RECIEVING MESSAGES----------------------------//
 
-	///**
 	const int bufSize = 4096;
 	char* serverBuffer = new char[bufSize] {};
 
@@ -573,47 +739,49 @@ TEST(HighLoadTestCase, FullyAsynchServerFromClientRecieve)
 
 	for (size_t index = 0; index < 1024; index++)
 	{
-		//--------------------------------------------------------------------
-		// Creating random string
+		//--------------------PREPARE SENDING MESSAGE---------------------//
+
 		TestToolkit::GetRandomString(clientMessage, bufSize);
 
-		//--------------------------------------------------------------------
-		// Send string
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(client.Send(clientMessage, bufSize),
 			CustomSocket::Result::Success);
 		EXPECT_EQ(client.WaitOnSendEvent(), CustomSocket::Result::Success);
 
-		//--------------------------------------------------------------------
-		// Recieve string
 		EXPECT_EQ(server.Recieve(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
 			serverBuffer, bufSize), CustomSocket::Result::Success);
 		EXPECT_EQ(server.WaitClientOnRecieveEvent(clientIPConfig.GetIPString(),
 			clientIPConfig.GetPort()),
 			CustomSocket::Result::Success);
 
-		//--------------------------------------------------------------------
-		// Creating checksum
+		//--------------------PREPARING CHECKSUM--------------------------//
+
 		boost::crc_32_type serverBufferCheckSum;
 		serverBufferCheckSum.process_bytes(serverBuffer, bufSize);
 
 		boost::crc_32_type clientMessageCheckSum;
 		clientMessageCheckSum.process_bytes(clientMessage, bufSize);
 
-		//--------------------------------------------------------------------
-		// Checking checksum
+		//--------------------CHECKING CHECKSUM---------------------------//
+
 		EXPECT_EQ(clientMessageCheckSum.checksum(), serverBufferCheckSum.checksum());
 	}
-	//**/
 
-	//--------------------------------------------------------------------
+	//----------------------CLEARING HEAP---------------------------------//
+
+	delete[] serverBuffer;
+	delete[] clientMessage;
+
 }
 
-///**
 TEST(HighLoadTestCase, PublisherSubscriberTest)
 {
+	//---------------------CREATING LOGGER--------------------------------//
+
 	SubscribingLogger logger;
 
-	//-------------------------------------------------------------------
+	//---------------------RUNNING SERVER---------------------------------//
 
 	PublishingServer server(CustomSocket::IPEndpoint("127.0.0.1", 0));
 	server.Subscribe(logger);
@@ -622,7 +790,7 @@ TEST(HighLoadTestCase, PublisherSubscriberTest)
 
 	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
 
-	//-------------------------------------------------------------------
+	//----------------------RUNNING CLIENT--------------------------------//
 
 	CustomSocket::Socket client;
 
@@ -632,42 +800,61 @@ TEST(HighLoadTestCase, PublisherSubscriberTest)
 	CustomSocket::IPEndpoint clientIPConfig;
 	EXPECT_EQ(client.GetSocketInfo(clientIPConfig), CustomSocket::Result::Success);
 
-	//--------------------------------------------------------------------
+	//----------------------CONNECTING AGENTS-----------------------------//
 
 	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
 	server.WaitForConnection();
 
 	EXPECT_EQ(server.GetConnectionList(), std::vector<CustomSocket::IPEndpoint> { clientIPConfig });
 
-	//--------------------------------------------------------------------
+	//----------------------SENDING MESSAGES------------------------------//
 
 	const int bufSize = 4096;
-	const char* serverMessage = new char[bufSize]
-	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+	char* serverMessage = new char[bufSize];
 
 	int bytesToRecieve = bufSize;
 	char* clientBuffer = new char[bytesToRecieve] {};
 
 	for (size_t index = 0; index < 1024; index++)
 	{
+		//--------------------PREPARE SENDING MESSAGE---------------------//
+
+		TestToolkit::GetRandomString(serverMessage, bufSize);
+
+		//--------------------PERFORMING TESTED OPERATION-----------------//
+
 		EXPECT_EQ(server.Send(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
 			serverMessage, bufSize), CustomSocket::Result::Success);
-
-		EXPECT_EQ(client.RecieveAll(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
-
 		EXPECT_EQ(server.WaitClientOnSendEvent(clientIPConfig.GetIPString(),
 			clientIPConfig.GetPort()),
 			CustomSocket::Result::Success);
 
+		EXPECT_EQ(client.RecieveAll(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
+
+		//--------------------PREPARING CHECKSUM--------------------------//
+
+		boost::crc_32_type serverMessageCheckSum;
+		serverMessageCheckSum.process_bytes(serverMessage, bufSize);
+
+		boost::crc_32_type clientBufferCheckSum;
+		clientBufferCheckSum.process_bytes(clientBuffer, bufSize);
+
+		//--------------------CHECKING CHECKSUM---------------------------//
+
+		EXPECT_EQ(clientBufferCheckSum.checksum(), serverMessageCheckSum.checksum());
+
 	}
 
-	//--------------------------------------------------------------------
+	//----------------------CLOSING AGENTS--------------------------------//
 
 	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
 	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
-}
-//**/
 
+	//----------------------CLEARING HEAP---------------------------------//
+
+	delete[] serverMessage;
+	delete[] clientBuffer;
+}
 
 int main(int argc, char* argv[])
 {

@@ -3,10 +3,14 @@
 
 int main()
 {
-	SubscribingClient client;
+	/**
+	SubscribingLogger client;
 
-	std::cout << client.GetClientIPConfig() << std::endl;
+	client.Update();
+	client.Update();
 
 	system("pause");
+	return 0;
+	**/
 	return 0;
 }

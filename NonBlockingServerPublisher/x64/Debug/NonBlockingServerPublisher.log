@@ -1,3 +1,4 @@
 ﻿  PublishingServer.cpp
   Source.cpp
-  NonBlockingServerPublisher.vcxproj -> C:\Users\nikita.katechkin\source\repos\NonBlockingSocket\x64\Debug\NonBlockingServerPublisher.exe
+  Замена x64\Debug\Source.obj
+  NonBlockingServerPublisher.vcxproj -> C:\Users\nikita.katechkin\source\repos\NonBlockingSocket\x64\Debug\NonBlockingServerPublisher.lib

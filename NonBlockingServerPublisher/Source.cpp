@@ -3,6 +3,7 @@
 
 int main()
 {
+	/**
 	PublishingServer server;
 	server.Run();
 
@@ -11,5 +12,7 @@ int main()
 	server.Stop();
 
 	system("pause");
+	return 0;
+	**/
 	return 0;
 }

@@ -2,6 +2,8 @@
 
 #include <NonBlockingCallbackServer/CalbackServer.h>
 #include <NonBlockingCallbackClient/CallbackClient.h>
+#include <NonBlockingServerPublisher/PublishingServer.h>
+#include <NonBlockingClientSubscriber/SubscribingClient.h>
 
 #include <boost/crc.hpp>
 #include <cstdlib>
@@ -605,6 +607,67 @@ TEST(HighLoadTestCase, FullyAsynchServerFromClientRecieve)
 
 	//--------------------------------------------------------------------
 }
+
+///**
+TEST(HighLoadTestCase, PublisherSubscriberTest)
+{
+	SubscribingLogger logger;
+
+	//-------------------------------------------------------------------
+
+	PublishingServer server(CustomSocket::IPEndpoint("127.0.0.1", 0));
+	server.Subscribe(logger);
+
+	EXPECT_EQ(server.Run(), CustomSocket::Result::Success);
+
+	CustomSocket::IPEndpoint serverIPConfig = server.GetServerIPConfig();
+
+	//-------------------------------------------------------------------
+
+	CustomSocket::Socket client;
+
+	EXPECT_EQ(client.Create(), CustomSocket::Result::Success);
+	EXPECT_EQ(client.Bind(), CustomSocket::Result::Success);
+
+	CustomSocket::IPEndpoint clientIPConfig;
+	EXPECT_EQ(client.GetSocketInfo(clientIPConfig), CustomSocket::Result::Success);
+
+	//--------------------------------------------------------------------
+
+	EXPECT_EQ(client.Connect(serverIPConfig), CustomSocket::Result::Success);
+	server.WaitForConnection();
+
+	EXPECT_EQ(server.GetConnectionList(), std::vector<CustomSocket::IPEndpoint> { clientIPConfig });
+
+	//--------------------------------------------------------------------
+
+	const int bufSize = 4096;
+	const char* serverMessage = new char[bufSize]
+	{"NIKITA, HONEY. TAKE THIS SOCKET STREAM MESSAGE)\0"};
+
+	int bytesToRecieve = bufSize;
+	char* clientBuffer = new char[bytesToRecieve] {};
+
+	for (size_t index = 0; index < 1024; index++)
+	{
+		EXPECT_EQ(server.Send(clientIPConfig.GetIPString(), clientIPConfig.GetPort(),
+			serverMessage, bufSize), CustomSocket::Result::Success);
+
+		EXPECT_EQ(client.RecieveAll(clientBuffer, bytesToRecieve), CustomSocket::Result::Success);
+
+		EXPECT_EQ(server.WaitClientOnSendEvent(clientIPConfig.GetIPString(),
+			clientIPConfig.GetPort()),
+			CustomSocket::Result::Success);
+
+	}
+
+	//--------------------------------------------------------------------
+
+	EXPECT_EQ(server.Stop(), CustomSocket::Result::Success);
+	EXPECT_EQ(client.Close(), CustomSocket::Result::Success);
+}
+//**/
+
 
 int main(int argc, char* argv[])
 {
